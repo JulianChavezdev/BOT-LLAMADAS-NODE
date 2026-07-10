@@ -1,0 +1,29 @@
+{
+  "name": "bot-llamadas-saas",
+  "version": "1.0.0",
+  "description": "SaaS base para asistentes telefonicos de restaurantes con Twilio y Deepgram.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "check": "node --check index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@deepgram/sdk": "^3.13.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "googleapis": "^173.0.0",
+    "ngrok": "^5.0.0-beta.2",
+    "openai": "^6.44.0",
+    "twilio": "^6.0.2",
+    "waveheader": "^0.0.1",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
