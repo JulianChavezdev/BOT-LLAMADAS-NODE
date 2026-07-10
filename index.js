@@ -14,17 +14,20 @@ import WebSocket from 'ws';
 import http from 'http';
 import twilio from 'twilio';
 import { google } from 'googleapis';
+import { defaultBusiness } from './src/config/businesses.js';
+import { buildSystemPrompt } from './src/services/promptBuilder.js';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 5050;
+const business = defaultBusiness;
 
 console.log("==========================================");
 console.log("🔑 AUDITORÍA DE CREDENCIALES:");
-console.log("Deepgram Key:", process.env.DEEPGRAM_API_KEY ? `✅ (Empieza por: ${process.env.DEEPGRAM_API_KEY.substring(0, 6)}...)` : "❌ NO DETECTADA");
-console.log("OpenAI Key:", process.env.OPENAI_API_KEY ? `✅ (Empieza por: ${process.env.OPENAI_API_KEY.substring(0, 6)}...)` : "❌ NO DETECTADA");
-console.log("GOOGLE_SHEET_ID:", process.env.GOOGLE_SHEET_ID ? `✅ (Empieza por: ${process.env.GOOGLE_SHEET_ID.substring(0, 6)}...)` : "❌ NO DETECTADA");
+console.log("Deepgram Key:", process.env.DEEPGRAM_API_KEY ? "✅ configurada" : "❌ NO DETECTADA");
+console.log("OpenAI Key:", process.env.OPENAI_API_KEY ? "✅ configurada" : "❌ NO DETECTADA");
+console.log("GOOGLE_SHEET_ID:", process.env.GOOGLE_SHEET_ID ? "✅ configurada" : "❌ NO DETECTADA");
 console.log("TWILIO_WHATSAPP_FROM:", process.env.TWILIO_WHATSAPP_FROM ? `✅ (${process.env.TWILIO_WHATSAPP_FROM})` : "❌ NO DETECTADA");
 console.log("==========================================");
 
@@ -145,18 +148,7 @@ const AGENT_FUNCTIONS = [
     }
 ];
 
-const SYSTEM_PROMPT = `Eres el cajero automatizado de Kriterio's Burger en Sevilla. Atiendes con excelente energía, alegre y con acento colombiano amigable.
-
-REGLAS DE LOCUCIÓN DE VOZ (CRÍTICAS):
-1. TUS RESPUESTAS DEBEN SER MÁXIMO 1 A 2 FRASES CORTAS. No te extiendas, no listes ingredientes espontáneamente a menos que el cliente te lo pida directamente.
-2. Sé directo y dinámico. Si el cliente pide algo, confirma brevemente y pregunta el paso siguiente. Ej: "¡De una! Una Martina. ¿Le agregamos algo más o alguna bebida?".
-3. Solo recogida en local. No hay delivery.
-4. Cuando el cliente haya terminado de pedir, pregunta si desea algo más.
-5. Cuando confirme que terminó, pide su nombre.
-6. Con el nombre en mano, di el total rápidamente y despídete con energía. Luego llama a la función finalizar_pedido con todos los datos.
-7. Nunca menciones "función", "sistema" ni términos técnicos al cliente.
-
-MENÚ COMPLETO: ${JSON.stringify(KRI_MENU)}`;
+const SYSTEM_PROMPT = buildSystemPrompt({ business, menu: KRI_MENU });
 
 // ==========================================
 // RUTAS HTTP Y FUNCIONES DE NEGOCIO SE MANTIENEN IGUALES
@@ -167,7 +159,7 @@ app.post('/twilio-voice', (req, res) => {
     res.type('text/xml');
     res.send(`
         <Response>
-            <Say language="es-MX" voice="Polly.Mia">Conectando con el asistente de Kriterios Burger.</Say>
+            <Say language="${business.voice.twilioLanguage}" voice="${business.voice.twilioVoice}">Conectando con el asistente de ${business.name}.</Say>
             <Connect>
                 <Stream url="wss://${req.headers.host}/media-stream">
                     <Parameter name="From" value="${numeroLlamante}" />
@@ -266,8 +258,8 @@ const config = {
         listen: {
             provider: {
                 type: "deepgram",
-                model: "nova-3",
-                language: "es",
+                model: business.voice.deepgramListenModel,
+                language: business.voice.deepgramLanguage,
                 smart_format: false
             }
         },
@@ -282,10 +274,10 @@ const config = {
         speak: {
             provider: {
                 type: "deepgram",
-                model: "aura-2-gloria-es"
+                model: business.voice.deepgramSpeakModel
             }
         },
-        greeting: "Hola, Kriterio's Burger, habla tu asistente. ¿Qué te provoca pedir hoy?"
+        greeting: business.voice.greeting
     }
 }; 
 console.log("ENVIANDO SETTINGS");
