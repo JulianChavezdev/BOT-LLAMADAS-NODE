@@ -121,7 +121,7 @@ export async function findPendingOrderByPhone(phone) {
     );
 }
 
-export async function createOrder({ id, businessId, customerName, phone, summary, total }) {
+export async function createOrder({ id, businessId, customerName, phone, summary, total, callId }) {
     return withPrisma(
         async (prisma) => {
             await ensureBusiness(prisma, businessId);
@@ -135,12 +135,14 @@ export async function createOrder({ id, businessId, customerName, phone, summary
                     phone,
                     summary,
                     total,
+                    callId,
                     status: 'pending'
                 },
                 create: {
                     id,
                     businessId,
                     customerId: customer?.id,
+                    callId,
                     customerName,
                     phone,
                     summary,
@@ -151,7 +153,7 @@ export async function createOrder({ id, businessId, customerName, phone, summary
 
             return serializeOrder(order);
         },
-        () => jsonStore.createOrder({ id, businessId, customerName, phone, summary, total })
+        () => jsonStore.createOrder({ id, businessId, customerName, phone, summary, total, callId })
     );
 }
 

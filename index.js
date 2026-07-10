@@ -25,6 +25,7 @@ import {
     listPendingOrders,
     updateOrder
 } from './src/repositories/orderRepository.js';
+import { finishCall, startCall } from './src/repositories/callRepository.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -120,6 +121,7 @@ async function guardarPedido(streamSid, cliente, comandaText, telefono, total) {
     return createOrder({
         id: streamSid,
         businessId: business.id,
+        callId: streamSid,
         customerName: cliente,
         phone: telefono,
         summary: comandaText,
@@ -151,7 +153,13 @@ wss.on('connection', (twilioWs, req) => {
     let conversacionFinalizada = false;
     let agentWs = null;
     let agentReady = false; // <-- CRÍTICO: El cerrojo lógico de conexión
+    let callClosed = false;
 
+    async function cerrarRegistroLlamada(status = 'completed') {
+        if (!streamSid || callClosed) return;
+        callClosed = true;
+        await finishCall(streamSid, status);
+    }
 function conectarVoiceAgent() {
         console.log('🤖 Conectando con Deepgram Voice Agent...');
 
@@ -362,6 +370,11 @@ catch(e){
                 clienteTelefono = data.start.customParameters?.From || 'Desconocido';
                 console.log(`🆔 Stream iniciado. SID: ${streamSid} | Teléfono: ${clienteTelefono}`);
 
+                await startCall({
+                    id: streamSid,
+                    businessId: business.id,
+                    phone: clienteTelefono
+                });
                 pedidoPrevio = await buscarPedidoPendientePorTelefono(clienteTelefono);
                 conectarVoiceAgent();
                 break;
@@ -380,6 +393,7 @@ catch(e){
 
             case 'stop':
                 console.log('🛑 Twilio detuvo el stream.');
+                await cerrarRegistroLlamada('completed');
                 if (agentWs && agentWs.readyState === WebSocket.OPEN) agentWs.close();
                 break;
         }
@@ -387,10 +401,15 @@ catch(e){
 
     twilioWs.on('close', () => {
         console.log('🔌 Canal de audio de Twilio cerrado.');
+        cerrarRegistroLlamada('completed').catch(error => console.error('Error cerrando registro de llamada:', error));
         if (agentWs && agentWs.readyState === WebSocket.OPEN) agentWs.close();
     });
 
-    twilioWs.on('error', (err) => console.error('❌ Error en WebSocket de Twilio:', err.message));
+    twilioWs.on('error', (err) => {
+        console.error('❌ Error en WebSocket de Twilio:', err.message);
+        cerrarRegistroLlamada('failed').catch(error => console.error('Error marcando llamada fallida:', error));
+    });
+
 });
 
 server.listen(PORT, () => {
