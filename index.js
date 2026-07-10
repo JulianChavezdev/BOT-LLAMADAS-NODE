@@ -22,10 +22,11 @@ import {
     completeOrder,
     createOrder,
     findPendingOrderByPhone,
+    listOrders,
     listPendingOrders,
     updateOrder
 } from './src/repositories/orderRepository.js';
-import { finishCall, startCall } from './src/repositories/callRepository.js';
+import { finishCall, listCalls, startCall } from './src/repositories/callRepository.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -96,6 +97,17 @@ app.get('/api/pedidos', async (req, res) => {
         estado: order.status
     })));
 });
+
+app.get('/api/pedidos/todos', async (req, res) => {
+    const orders = await listOrders();
+    res.json(orders);
+});
+
+app.get('/api/llamadas', async (req, res) => {
+    const calls = await listCalls();
+    res.json(calls);
+});
+
 app.post('/cocina/completar', async (req, res) => {
     const { id } = req.body;
 

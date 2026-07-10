@@ -159,3 +159,8 @@ export async function finishCall(id, status = 'completed') {
         endedAt: new Date().toISOString()
     });
 }
+
+export async function listCalls() {
+    const calls = await readJsonFile(CALLS_FILE);
+    return calls.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+}

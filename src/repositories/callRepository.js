@@ -121,3 +121,17 @@ export async function finishCall(id, status = 'completed') {
         () => jsonStore.finishCall(id, status)
     );
 }
+
+export async function listCalls() {
+    return withPrisma(
+        async (prisma) => {
+            const calls = await prisma.call.findMany({
+                orderBy: { startedAt: 'desc' },
+                take: 100
+            });
+
+            return calls.map(serializeCall);
+        },
+        () => jsonStore.listCalls()
+    );
+}
