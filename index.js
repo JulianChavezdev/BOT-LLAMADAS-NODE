@@ -58,7 +58,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const menu = bistroNubeMenu;
-const SYSTEM_PROMPT = buildSystemPrompt({ business, menu });
+
+async function buildCurrentSystemPrompt() {
+    const menuItems = await listMenuItems(business.id);
+    return buildSystemPrompt({ business, menuItems });
+}
 
 app.get('/health', (req, res) => {
     res.json({
@@ -266,6 +270,9 @@ function conectarVoiceAgent() {
                 case 'Welcome':
                     console.log(`👋 Welcome recibido (ID: ${event.request_id}). Enviando configuración plana oficial...`);
                     
+                    const systemPrompt = await buildCurrentSystemPrompt();
+                    console.log('Menu disponible cargado para Voice Agent.');
+
                     // ESQUEMA OFICIAL DE DEEPGRAM PARA VOICE AGENT CON TWILIO
 const config = {
     type: "Settings",
@@ -294,7 +301,7 @@ const config = {
                 type: "open_ai",
                 model: "gpt-4o-mini"
             },
-            prompt: SYSTEM_PROMPT,
+            prompt: systemPrompt,
             functions: agentFunctions
         },
         speak: {

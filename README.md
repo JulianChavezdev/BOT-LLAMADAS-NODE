@@ -79,7 +79,8 @@ Hecho:
 - APIs operativas para pedidos y llamadas.
 - Panel admin demo para revisar negocio, menu, pedidos y llamadas.
 - Gestion basica de disponibilidad de productos.
+- El agente de voz construye su prompt con productos disponibles desde la base de datos.
 
 Siguiente paso recomendado:
 
-- Hacer que el agente de voz use solo productos disponibles desde la base de datos.
+- Agregar autenticacion simple al panel admin y proteger las APIs operativas.
