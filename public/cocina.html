@@ -3,23 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kriterio's Burger - Cocina</title>
-    <!-- Cargamos Tailwind para que se vea premium -->
+    <title>Bistro Nube - Cocina</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Auto-refrescar la pantalla cada 5 segundos para ver pedidos nuevos -->
     <meta http-equiv="refresh" content="5">
 </head>
 <body class="bg-gray-950 text-gray-100 font-sans min-h-screen">
-
-    <!-- Encabezado Principal -->
     <header class="bg-gray-900 border-b border-gray-800 p-5 shadow-md">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-black tracking-wider text-yellow-500">🔥 KRITERIO'S BURGER <span class="text-white text-sm font-normal block md:inline md:ml-2">| Panel de Control de Cocina</span></h1>
-            <span class="bg-gray-800 border border-gray-700 text-xs px-3 py-1.5 rounded-full text-gray-400 font-mono">Panel Activo</span>
+            <h1 class="text-2xl font-black tracking-wider text-yellow-500">BISTRO NUBE <span class="text-white text-sm font-normal block md:inline md:ml-2">| Panel de Cocina</span></h1>
+            <span class="bg-gray-800 border border-gray-700 text-xs px-3 py-1.5 rounded-full text-gray-400 font-mono">Demo activa</span>
         </div>
     </header>
 
-    <!-- Tabla de Comandas -->
     <main class="max-w-6xl mx-auto p-6 mt-4">
         <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl overflow-hidden">
             <table class="w-full text-left border-collapse">
@@ -27,16 +22,15 @@
                     <tr class="bg-gray-800/50 text-gray-400 font-bold text-xs tracking-wider uppercase border-b border-gray-800">
                         <th class="p-4">ID Pedido</th>
                         <th class="p-4">Cliente</th>
-                        <th class="p-4">Comanda Detallada</th>
+                        <th class="p-4">Comanda</th>
                         <th class="p-4">Estado</th>
-                        <th class="p-4">Acción</th>
+                        <th class="p-4">Accion</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-pedidos">
-                    <!-- Las comandas entrarán aquí desde el servidor -->
                     <tr>
                         <td colspan="5" class="p-8 text-center text-gray-500 font-medium">
-                            📭 No hay pedidos pendientes de momento... ¡A descansar, parce!
+                            No hay pedidos pendientes.
                         </td>
                     </tr>
                 </tbody>
@@ -45,15 +39,14 @@
     </main>
 
     <script>
-        // Este pequeño script le pide los pedidos reales al servidor Node.js
         async function cargarPedidos() {
             try {
                 const res = await fetch('/api/pedidos');
                 const pedidos = await res.json();
                 const tbody = document.getElementById('tabla-pedidos');
-                
+
                 if (pedidos.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">📭 No hay pedidos pendientes de momento... ¡A descansar, parce!</td></tr>`;
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500 font-medium">No hay pedidos pendientes.</td></tr>';
                     return;
                 }
 
@@ -63,17 +56,17 @@
                         <td class="p-4 font-bold text-white">${p.nombre}</td>
                         <td class="p-4 text-gray-300 text-sm whitespace-pre-line">${p.resumen}</td>
                         <td class="p-4">
-                            <span class="px-2 py-1 text-xs rounded bg-orange-500 text-white font-bold animate-pulse">PENDIENTE</span>
+                            <span class="px-2 py-1 text-xs rounded bg-orange-500 text-white font-bold">PENDIENTE</span>
                         </td>
                         <td class="p-4">
-                            <button onclick="marcarListo('${p.id}')" class="bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-2 px-4 rounded tracking-wide shadow transition transform active:scale-95">
-                                ✅ PEDIDO LISTO
+                            <button onclick="marcarListo('${p.id}')" class="bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-2 px-4 rounded tracking-wide shadow transition active:scale-95">
+                                PEDIDO LISTO
                             </button>
                         </td>
                     </tr>
                 `).join('');
             } catch (err) {
-                console.error("Error cargando pedidos:", err);
+                console.error('Error cargando pedidos:', err);
             }
         }
 
@@ -83,10 +76,9 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id })
             });
-            cargarPedidos(); // Recarga la lista de inmediato
+            cargarPedidos();
         }
 
-        // Cargar al entrar
         cargarPedidos();
     </script>
 </body>

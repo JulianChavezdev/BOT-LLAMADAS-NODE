@@ -16,7 +16,8 @@ import twilio from 'twilio';
 import { google } from 'googleapis';
 import { defaultBusiness } from './src/config/businesses.js';
 import { buildSystemPrompt } from './src/services/promptBuilder.js';
-import { kriteriosBurgerMenu } from './src/config/menus/kriteriosBurgerMenu.js';
+import { bistroNubeMenu } from './src/config/menus/bistroNubeMenu.js';
+import { agentFunctions } from './src/agent/functions.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -49,26 +50,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ==========================================
-// DEFINICIÓN DE FUNCIONES PARA EL VOICE AGENT
-// ==========================================
-const AGENT_FUNCTIONS = [
-    {
-        name: "finalizar_pedido",
-        description: "Llama esta función ÚNICAMENTE cuando el cliente haya confirmado todos sus productos, hayas preguntado si quiere algo más y te haya dado su nombre. Extrae el resumen completo del pedido y el total.",
-        parameters: {
-            type: "object",
-            properties: {
-                nombre_cliente: { type: "string", description: "Nombre del cliente tal como lo dijo" },
-                resumen_pedido: { type: "string", description: "Lista detallada de todos los productos pedidos con cantidades y adiciones. Ejemplo: '1x Hamburguesa Martina + Queso extra, 1x Batido de Mora con leche, 1x Coca-Cola'" },
-                total: { type: "number", description: "Total exacto en euros calculado sumando todos los productos y adiciones" }
-            },
-            required: ["nombre_cliente", "resumen_pedido", "total"]
-        }
-    }
-];
-
-const menu = kriteriosBurgerMenu;
+const menu = bistroNubeMenu;
 const SYSTEM_PROMPT = buildSystemPrompt({ business, menu });
 
 // ==========================================
@@ -190,7 +172,7 @@ const config = {
                 model: "gpt-4o-mini"
             },
             prompt: SYSTEM_PROMPT,
-            functions: AGENT_FUNCTIONS
+            functions: agentFunctions
         },
         speak: {
             provider: {

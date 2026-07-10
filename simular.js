@@ -1,34 +1,35 @@
 import WebSocket from 'ws';
 
-// Nos conectamos al servidor local en el puerto 5050
 const ws = new WebSocket('ws://localhost:5050');
 
 ws.on('open', () => {
-    console.log('⚡ [Simulador] Conectado al servidor de Kriterios.');
-    
-    // Generamos un ID de llamada único para este test
+    console.log('[Simulador] Conectado al servidor de Bistro Nube.');
+
     const streamSid = 'TEST_LLAMADA_' + Math.floor(Math.random() * 1000);
 
-    // 1. Iniciamos la simulación
     ws.send(JSON.stringify({
         event: 'start',
-        start: { streamSid: streamSid }
+        start: {
+            streamSid,
+            customParameters: {
+                From: '+34000000000'
+            }
+        }
     }));
 
-    // 2. Enviamos los mensajes simulados con tiempos para que la IA responda
     setTimeout(() => {
-        console.log('➡️ Enviando saludo...');
-        ws.send(JSON.stringify({ event: 'test', text: 'Buenas, ¿qué hamburguesas tienen?' }));
+        console.log('Enviando consulta de menu...');
+        ws.send(JSON.stringify({ event: 'test', text: 'Buenas, que platos tienen?' }));
     }, 1000);
 
     setTimeout(() => {
-        console.log('➡️ Pidiendo la comida...');
-        ws.send(JSON.stringify({ event: 'test', text: 'Quiero una hamburguesa Martina sin cebolla, un Choriperro Calidoso y una Postobón de Manzana' }));
+        console.log('Enviando pedido de ejemplo...');
+        ws.send(JSON.stringify({ event: 'test', text: 'Quiero una Burger Nube con queso extra, unas croquetas de setas y una limonada casera' }));
     }, 5000);
 
     setTimeout(() => {
-        console.log('➡️ Dando los datos de cierre...');
-        ws.send(JSON.stringify({ event: 'test', text: 'Mi nombre es Carlos y pasaré a recogerlo al local' }));
+        console.log('Enviando cierre...');
+        ws.send(JSON.stringify({ event: 'test', text: 'Mi nombre es Alex y paso a recogerlo en el local' }));
     }, 10000);
 });
 
@@ -36,13 +37,13 @@ ws.on('message', (data) => {
     try {
         const mensaje = JSON.parse(data);
         if (mensaje.event === 'media') {
-            console.log('🔊 [Servidor] Recibida respuesta de voz en formato MULAW (El bot está hablando...).');
+            console.log('[Servidor] Recibida respuesta de voz en formato MULAW.');
         }
     } catch (err) {
-        // Ignorar si llegan otros formatos
+        // Ignorar mensajes no JSON.
     }
 });
 
 ws.on('close', () => {
-    console.log('🛑 [Simulador] Conexión cerrada.');
+    console.log('[Simulador] Conexion cerrada.');
 });
