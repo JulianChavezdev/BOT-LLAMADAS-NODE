@@ -11,3 +11,5 @@ coverage/
 *.zip
 data/*.json
 !data/.gitkeep
+prisma/*.db
+prisma/*.db-journal

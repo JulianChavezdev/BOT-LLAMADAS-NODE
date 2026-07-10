@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id          String   @id
+  name        String
+  city        String
+  country     String   @default("ES")
+  locale      String   @default("es-ES")
+  timezone    String   @default("Europe/Madrid")
+  serviceMode String   @default("pickup_only")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  menuItems MenuItem[]
+  customers Customer[]
+  calls     Call[]
+  orders    Order[]
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  businessId  String
+  category    String
+  name        String
+  description String?
+  price       Float
+  metadata    String?
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, category])
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  businessId String
+  phone      String
+  name       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  calls    Call[]
+  orders   Order[]
+
+  @@unique([businessId, phone])
+}
+
+model Call {
+  id         String     @id
+  businessId String
+  customerId String?
+  phone      String?
+  provider   String     @default("twilio")
+  status     CallStatus @default(active)
+  transcript String?
+  startedAt  DateTime   @default(now())
+  endedAt    DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  orders   Order[]
+
+  @@index([businessId, status])
+  @@index([phone])
+}
+
+model Order {
+  id           String      @id
+  businessId   String
+  customerId   String?
+  callId       String?
+  customerName String
+  phone        String?
+  summary      String
+  total        Float?
+  status       OrderStatus @default(pending)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  completedAt  DateTime?
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  call     Call?     @relation(fields: [callId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status])
+  @@index([phone])
+}
+
+enum CallStatus {
+  active
+  completed
+  failed
+}
+
+enum OrderStatus {
+  pending
+  completed
+  cancelled
+}
