@@ -27,6 +27,7 @@ import {
     updateOrder
 } from './src/repositories/orderRepository.js';
 import { finishCall, listCalls, startCall } from './src/repositories/callRepository.js';
+import { listMenuItems, setMenuItemAvailability } from './src/repositories/menuRepository.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -121,6 +122,31 @@ app.get('/api/business', (req, res) => {
 
 app.get('/api/menu', (req, res) => {
     res.json(menu);
+});
+
+app.get('/api/menu-items', async (req, res) => {
+    const items = await listMenuItems(business.id);
+    res.json(items);
+});
+
+app.patch('/api/menu-items/:id/availability', async (req, res) => {
+    const { available } = req.body;
+
+    if (typeof available !== 'boolean') {
+        return res.status(400).json({ error: 'available debe ser boolean' });
+    }
+
+    const item = await setMenuItemAvailability({
+        businessId: business.id,
+        id: req.params.id,
+        available
+    });
+
+    if (!item) {
+        return res.status(404).json({ error: 'producto no encontrado' });
+    }
+
+    res.json({ ok: true, item });
 });
 
 app.get('/api/pedidos/todos', async (req, res) => {

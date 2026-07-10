@@ -53,52 +53,75 @@
             return response.json();
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
+        }
+
         function stat(label, value) {
             return `
                 <article class="bg-slate-900 border border-slate-800 rounded-lg p-4">
-                    <p class="text-xs uppercase tracking-wide text-slate-500">${label}</p>
-                    <p class="mt-2 text-2xl font-semibold">${value}</p>
+                    <p class="text-xs uppercase tracking-wide text-slate-500">${escapeHtml(label)}</p>
+                    <p class="mt-2 text-2xl font-semibold">${escapeHtml(value)}</p>
                 </article>
             `;
         }
 
         function renderBusiness(business) {
             document.getElementById('business').innerHTML = `
-                <p><span class="text-slate-500">ID:</span> ${business.id}</p>
-                <p><span class="text-slate-500">Nombre:</span> ${business.name}</p>
-                <p><span class="text-slate-500">Ciudad:</span> ${business.city}</p>
-                <p><span class="text-slate-500">Zona horaria:</span> ${business.timezone}</p>
-                <p><span class="text-slate-500">Modo:</span> ${business.serviceMode}</p>
-                <p><span class="text-slate-500">Voz:</span> ${business.voice.deepgramSpeakModel}</p>
+                <p><span class="text-slate-500">ID:</span> ${escapeHtml(business.id)}</p>
+                <p><span class="text-slate-500">Nombre:</span> ${escapeHtml(business.name)}</p>
+                <p><span class="text-slate-500">Ciudad:</span> ${escapeHtml(business.city)}</p>
+                <p><span class="text-slate-500">Zona horaria:</span> ${escapeHtml(business.timezone)}</p>
+                <p><span class="text-slate-500">Modo:</span> ${escapeHtml(business.serviceMode)}</p>
+                <p><span class="text-slate-500">Voz:</span> ${escapeHtml(business.voice.deepgramSpeakModel)}</p>
             `;
         }
 
-        function renderMenu(menu) {
-            const html = Object.entries(menu).flatMap(([category, items]) => {
-                if (!Array.isArray(items)) return [];
-                return items.map(item => `
+        function renderMenu(items) {
+            const html = items.map(item => `
                     <article class="border border-slate-800 rounded-lg p-3">
                         <div class="flex justify-between gap-3">
-                            <h3 class="font-medium">${item.nombre}</h3>
-                            <span class="text-emerald-400">${money.format(item.precio)}</span>
+                            <h3 class="font-medium">${escapeHtml(item.name)}</h3>
+                            <span class="text-emerald-400">${money.format(item.price)}</span>
                         </div>
-                        <p class="text-xs uppercase tracking-wide text-slate-500 mt-1">${category}</p>
-                        <p class="text-sm text-slate-400 mt-2">${(item.ingredientes || [item.acompanamiento]).filter(Boolean).join(', ')}</p>
+                        <p class="text-xs uppercase tracking-wide text-slate-500 mt-1">${escapeHtml(item.category)}</p>
+                        <p class="text-sm text-slate-400 mt-2">${escapeHtml(item.description)}</p>
+                        <button data-menu-id="${item.id}" data-available="${!item.available}" class="mt-3 text-xs px-2 py-1 rounded ${item.available ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-slate-700 hover:bg-slate-600'}">
+                            ${item.available ? 'Disponible' : 'No disponible'}
+                        </button>
                     </article>
-                `);
-            }).join('');
+                `).join('');
 
             document.getElementById('menu').innerHTML = html || '<p class="text-slate-500">Sin productos.</p>';
+
+            document.querySelectorAll('[data-menu-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    button.disabled = true;
+                    const response = await fetch(`/api/menu-items/${encodeURIComponent(button.dataset.menuId)}/availability`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ available: button.dataset.available === 'true' })
+                    });
+                    if (!response.ok) throw new Error('No se pudo actualizar el producto');
+                    load();
+                });
+            });
         }
 
         function renderOrders(orders) {
             document.getElementById('orders').innerHTML = orders.map(order => `
                 <article class="border border-slate-800 rounded-lg p-3">
                     <div class="flex justify-between gap-3">
-                        <h3 class="font-medium">${order.customerName}</h3>
-                        <span class="text-xs px-2 py-1 rounded bg-slate-800">${order.status}</span>
+                        <h3 class="font-medium">${escapeHtml(order.customerName)}</h3>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-800">${escapeHtml(order.status)}</span>
                     </div>
-                    <p class="text-sm text-slate-400 mt-2">${order.summary}</p>
+                    <p class="text-sm text-slate-400 mt-2">${escapeHtml(order.summary)}</p>
                     <p class="text-sm mt-2 text-emerald-400">${order.total == null ? '' : money.format(order.total)}</p>
                 </article>
             `).join('') || '<p class="text-slate-500">Sin pedidos registrados.</p>';
@@ -108,19 +131,19 @@
             document.getElementById('calls').innerHTML = calls.map(call => `
                 <article class="border border-slate-800 rounded-lg p-3">
                     <div class="flex justify-between gap-3">
-                        <h3 class="font-mono text-sm">${call.id}</h3>
-                        <span class="text-xs px-2 py-1 rounded bg-slate-800">${call.status}</span>
+                        <h3 class="font-mono text-sm">${escapeHtml(call.id)}</h3>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-800">${escapeHtml(call.status)}</span>
                     </div>
-                    <p class="text-sm text-slate-400 mt-2">${call.phone || 'Sin telefono'}</p>
-                    <p class="text-xs text-slate-500 mt-2">${call.startedAt || ''}</p>
+                    <p class="text-sm text-slate-400 mt-2">${escapeHtml(call.phone || 'Sin telefono')}</p>
+                    <p class="text-xs text-slate-500 mt-2">${escapeHtml(call.startedAt || '')}</p>
                 </article>
             `).join('') || '<p class="text-slate-500">Sin llamadas registradas.</p>';
         }
 
         async function load() {
-            const [business, menu, orders, calls] = await Promise.all([
+            const [business, menuItems, orders, calls] = await Promise.all([
                 fetchJson('/api/business'),
-                fetchJson('/api/menu'),
+                fetchJson('/api/menu-items'),
                 fetchJson('/api/pedidos/todos'),
                 fetchJson('/api/llamadas')
             ]);
@@ -129,11 +152,11 @@
                 stat('Pedidos', orders.length),
                 stat('Pendientes', orders.filter(order => order.status === 'pending').length),
                 stat('Llamadas', calls.length),
-                stat('Productos', Object.values(menu).reduce((count, items) => count + (Array.isArray(items) ? items.length : 0), 0))
+                stat('Productos', menuItems.length)
             ].join('');
 
             renderBusiness(business);
-            renderMenu(menu);
+            renderMenu(menuItems);
             renderOrders(orders);
             renderCalls(calls);
         }

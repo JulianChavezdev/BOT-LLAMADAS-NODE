@@ -41,6 +41,10 @@ npm run db:studio
 - `POST /twilio-voice`: webhook de voz de Twilio.
 - `WS /media-stream`: puente de audio Twilio <-> Deepgram.
 - `GET /cocina`: panel demo de cocina.
+- `GET /admin`: panel demo de administracion.
+- `GET /api/business`: configuracion publica del negocio demo.
+- `GET /api/menu-items`: productos normalizados del menu con disponibilidad.
+- `PATCH /api/menu-items/:id/availability`: activa o desactiva un producto.
 - `GET /api/pedidos`: pedidos pendientes.
 - `GET /api/pedidos/todos`: historial de pedidos.
 - `GET /api/llamadas`: historial de llamadas.
@@ -73,8 +77,9 @@ Hecho:
 - Modelo Prisma para `Business`, `MenuItem`, `Customer`, `Call` y `Order`.
 - Registro de llamadas y clientes desde el flujo Twilio.
 - APIs operativas para pedidos y llamadas.
+- Panel admin demo para revisar negocio, menu, pedidos y llamadas.
+- Gestion basica de disponibilidad de productos.
 
 Siguiente paso recomendado:
 
-- Probar `prisma migrate dev` en Node LTS/CI o despliegue.
-- Crear panel admin real para negocio, menu, pedidos y llamadas.
+- Hacer que el agente de voz use solo productos disponibles desde la base de datos.
