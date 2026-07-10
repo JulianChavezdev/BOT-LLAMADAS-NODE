@@ -71,6 +71,7 @@ app.get('/health', (req, res) => {
 // RUTAS HTTP Y FUNCIONES DE NEGOCIO SE MANTIENEN IGUALES
 // ==========================================
 app.get('/cocina', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cocina.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.post('/twilio-voice', (req, res) => {
     const numeroLlamante = req.body.From || 'Desconocido';
     res.type('text/xml');
@@ -96,6 +97,30 @@ app.get('/api/pedidos', async (req, res) => {
         total: order.total,
         estado: order.status
     })));
+});
+
+app.get('/api/business', (req, res) => {
+    res.json({
+        id: business.id,
+        name: business.name,
+        city: business.city,
+        country: business.country,
+        locale: business.locale,
+        timezone: business.timezone,
+        serviceMode: business.serviceMode,
+        voice: {
+            greeting: business.voice.greeting,
+            twilioLanguage: business.voice.twilioLanguage,
+            twilioVoice: business.voice.twilioVoice,
+            deepgramSpeakModel: business.voice.deepgramSpeakModel,
+            deepgramListenModel: business.voice.deepgramListenModel,
+            deepgramLanguage: business.voice.deepgramLanguage
+        }
+    });
+});
+
+app.get('/api/menu', (req, res) => {
+    res.json(menu);
 });
 
 app.get('/api/pedidos/todos', async (req, res) => {

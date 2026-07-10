@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Bistro Nube</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+    <header class="border-b border-slate-800 bg-slate-900">
+        <div class="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-semibold">Bistro Nube</h1>
+                <p class="text-sm text-slate-400">Panel admin demo</p>
+            </div>
+            <a href="/cocina" class="text-sm bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded">Cocina</a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-5 py-6 space-y-6">
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-4" id="stats"></section>
+
+        <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-1 bg-slate-900 border border-slate-800 rounded-lg p-4">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Negocio</h2>
+                <div id="business" class="space-y-2 text-sm"></div>
+            </div>
+
+            <div class="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-lg p-4">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Menu</h2>
+                <div id="menu" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Pedidos</h2>
+                <div id="orders" class="space-y-3"></div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Llamadas</h2>
+                <div id="calls" class="space-y-3"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const money = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
+
+        async function fetchJson(url) {
+            const response = await fetch(url);
+            return response.json();
+        }
+
+        function stat(label, value) {
+            return `
+                <article class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                    <p class="text-xs uppercase tracking-wide text-slate-500">${label}</p>
+                    <p class="mt-2 text-2xl font-semibold">${value}</p>
+                </article>
+            `;
+        }
+
+        function renderBusiness(business) {
+            document.getElementById('business').innerHTML = `
+                <p><span class="text-slate-500">ID:</span> ${business.id}</p>
+                <p><span class="text-slate-500">Nombre:</span> ${business.name}</p>
+                <p><span class="text-slate-500">Ciudad:</span> ${business.city}</p>
+                <p><span class="text-slate-500">Zona horaria:</span> ${business.timezone}</p>
+                <p><span class="text-slate-500">Modo:</span> ${business.serviceMode}</p>
+                <p><span class="text-slate-500">Voz:</span> ${business.voice.deepgramSpeakModel}</p>
+            `;
+        }
+
+        function renderMenu(menu) {
+            const html = Object.entries(menu).flatMap(([category, items]) => {
+                if (!Array.isArray(items)) return [];
+                return items.map(item => `
+                    <article class="border border-slate-800 rounded-lg p-3">
+                        <div class="flex justify-between gap-3">
+                            <h3 class="font-medium">${item.nombre}</h3>
+                            <span class="text-emerald-400">${money.format(item.precio)}</span>
+                        </div>
+                        <p class="text-xs uppercase tracking-wide text-slate-500 mt-1">${category}</p>
+                        <p class="text-sm text-slate-400 mt-2">${(item.ingredientes || [item.acompanamiento]).filter(Boolean).join(', ')}</p>
+                    </article>
+                `);
+            }).join('');
+
+            document.getElementById('menu').innerHTML = html || '<p class="text-slate-500">Sin productos.</p>';
+        }
+
+        function renderOrders(orders) {
+            document.getElementById('orders').innerHTML = orders.map(order => `
+                <article class="border border-slate-800 rounded-lg p-3">
+                    <div class="flex justify-between gap-3">
+                        <h3 class="font-medium">${order.customerName}</h3>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-800">${order.status}</span>
+                    </div>
+                    <p class="text-sm text-slate-400 mt-2">${order.summary}</p>
+                    <p class="text-sm mt-2 text-emerald-400">${order.total == null ? '' : money.format(order.total)}</p>
+                </article>
+            `).join('') || '<p class="text-slate-500">Sin pedidos registrados.</p>';
+        }
+
+        function renderCalls(calls) {
+            document.getElementById('calls').innerHTML = calls.map(call => `
+                <article class="border border-slate-800 rounded-lg p-3">
+                    <div class="flex justify-between gap-3">
+                        <h3 class="font-mono text-sm">${call.id}</h3>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-800">${call.status}</span>
+                    </div>
+                    <p class="text-sm text-slate-400 mt-2">${call.phone || 'Sin telefono'}</p>
+                    <p class="text-xs text-slate-500 mt-2">${call.startedAt || ''}</p>
+                </article>
+            `).join('') || '<p class="text-slate-500">Sin llamadas registradas.</p>';
+        }
+
+        async function load() {
+            const [business, menu, orders, calls] = await Promise.all([
+                fetchJson('/api/business'),
+                fetchJson('/api/menu'),
+                fetchJson('/api/pedidos/todos'),
+                fetchJson('/api/llamadas')
+            ]);
+
+            document.getElementById('stats').innerHTML = [
+                stat('Pedidos', orders.length),
+                stat('Pendientes', orders.filter(order => order.status === 'pending').length),
+                stat('Llamadas', calls.length),
+                stat('Productos', Object.values(menu).reduce((count, items) => count + (Array.isArray(items) ? items.length : 0), 0))
+            ].join('');
+
+            renderBusiness(business);
+            renderMenu(menu);
+            renderOrders(orders);
+            renderCalls(calls);
+        }
+
+        load().catch(error => {
+            console.error(error);
+            document.body.insertAdjacentHTML('beforeend', '<p class="p-5 text-red-400">Error cargando panel admin.</p>');
+        });
+    </script>
+</body>
+</html>
