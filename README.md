@@ -1,39 +1,72 @@
 # Bot Llamadas SaaS
 
-Base SaaS para asistentes telefonicos de restaurantes.
+Base SaaS para asistentes telefonicos de restaurantes con Twilio y Deepgram.
 
-## Estado
+La demo actual usa el restaurante ficticio **Bistro Nube** y un menu pequeno para poder mostrar el sistema sin tocar datos reales.
 
-Este repo nace desde el prototipo `bot-llamadas-node`, pero limpio e independiente:
-
-- Sin `node_modules`
-- Sin `.env`
-- Sin `credentials.json`
-- Con `.env.example`
-- Con `.gitignore`
-- Con Git propio
-
-## Desarrollo local
-
-```bash
-npm install
-cp .env.example .env
-npm run dev
-```
-
-En Windows PowerShell:
+## Desarrollo Local
 
 ```powershell
+npm install
 Copy-Item .env.example .env
 npm run dev
 ```
 
-## Siguiente objetivo
+El archivo `.env` real no se versiona. Debe contener:
 
-Convertir el prototipo de un restaurante en una base multi-negocio:
+- `PORT`
+- `DATABASE_URL`
+- `DEEPGRAM_API_KEY`
+- `OPENAI_API_KEY`
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_WHATSAPP_FROM`
+- `GOOGLE_SHEET_ID` si se mantiene integracion con Sheets
 
-- Configuracion por negocio
-- Menu fuera de `index.js`
-- Prompt generado dinamicamente
-- Persistencia de pedidos
-- Panel interno de operaciones
+## Scripts
+
+```powershell
+npm run check
+npm run dev
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+npm run db:studio
+```
+
+## Endpoints
+
+- `GET /health`: estado basico del servicio.
+- `POST /twilio-voice`: webhook de voz de Twilio.
+- `WS /media-stream`: puente de audio Twilio <-> Deepgram.
+- `GET /cocina`: panel demo de cocina.
+- `GET /api/pedidos`: pedidos pendientes.
+- `GET /api/pedidos/todos`: historial de pedidos.
+- `GET /api/llamadas`: historial de llamadas.
+- `POST /cocina/completar`: marca un pedido como completado.
+
+## Persistencia
+
+El sistema intenta usar Prisma si `DATABASE_URL` esta configurado. Si Prisma no esta disponible, cae automaticamente a JSON local en `data/`.
+
+Esto permite mantener la demo funcionando mientras se completa la migracion a base de datos real.
+
+## Estado SaaS
+
+Hecho:
+
+- Repo limpio e independiente.
+- Configuracion de negocio separada.
+- Menu separado del motor.
+- Prompt generado dinamicamente.
+- Restaurante ficticio demo-ready.
+- Repositorio de pedidos con fallback JSON.
+- Modelo Prisma para `Business`, `MenuItem`, `Customer`, `Call` y `Order`.
+- Registro de llamadas y clientes desde el flujo Twilio.
+- APIs operativas para pedidos y llamadas.
+
+Siguiente paso recomendado:
+
+- Resolver ejecucion local de migraciones Prisma con runtime Node LTS o entorno de despliegue.
+- Pasar `orderRepository` y `callRepository` a Prisma como storage principal.
+- Crear panel admin real para negocio, menu, pedidos y llamadas.
