@@ -9,3 +9,5 @@ npm-debug.log*
 dist/
 coverage/
 *.zip
+data/*.json
+!data/.gitkeep

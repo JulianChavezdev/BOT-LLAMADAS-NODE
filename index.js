@@ -18,6 +18,13 @@ import { defaultBusiness } from './src/config/businesses.js';
 import { buildSystemPrompt } from './src/services/promptBuilder.js';
 import { bistroNubeMenu } from './src/config/menus/bistroNubeMenu.js';
 import { agentFunctions } from './src/agent/functions.js';
+import {
+    completeOrder,
+    createOrder,
+    findPendingOrderByPhone,
+    listPendingOrders,
+    updateOrder
+} from './src/repositories/orderRepository.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -43,15 +50,20 @@ const authSheets = new google.auth.GoogleAuth({
 });
 const sheets = google.sheets({ version: 'v4', auth: authSheets });
 
-// Memoria volátil para la interfaz de cocina
-let comandasCocina = [];
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const menu = bistroNubeMenu;
 const SYSTEM_PROMPT = buildSystemPrompt({ business, menu });
+
+app.get('/health', (req, res) => {
+    res.json({
+        ok: true,
+        service: 'bot-llamadas-saas',
+        businessId: business.id
+    });
+});
 
 // ==========================================
 // RUTAS HTTP Y FUNCIONES DE NEGOCIO SE MANTIENEN IGUALES
@@ -72,15 +84,55 @@ app.post('/twilio-voice', (req, res) => {
     `);
 });
 
-app.get('/api/pedidos', (req, res) => res.json(comandasCocina));
-app.post('/cocina/completar', async (req, res) => { /* Tu lógica existente de despacho */ });
+app.get('/api/pedidos', async (req, res) => {
+    const orders = await listPendingOrders();
+    res.json(orders.map(order => ({
+        id: order.id,
+        nombre: order.customerName,
+        telefono: order.phone,
+        resumen: order.summary,
+        total: order.total,
+        estado: order.status
+    })));
+});
+app.post('/cocina/completar', async (req, res) => {
+    const { id } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ error: 'id requerido' });
+    }
+
+    const order = await completeOrder(id);
+
+    if (!order) {
+        return res.status(404).json({ error: 'pedido no encontrado' });
+    }
+
+    res.json({ ok: true, order });
+});
 
 async function enviarMensajePedidoListo(telefono, nombre) { /* Tu lógica existente */ }
 async function obtenerNombrePrimeraHoja(sheetsClient, sheetId) { /* Tu lógica existente */ }
-async function buscarPedidoPendientePorTelefono(telefono) { /* Tu lógica existente */ }
-async function guardarPedidoEnSheets(streamSid, cliente, comandaText, telefono) { /* Tu lógica existente */ }
-async function actualizarComandaExistenteEnSheets(fila, nuevoResumen) { /* Tu lógica existente */ }
-async function actualizarEstadoEnSheets(streamSid, nuevoEstado) { /* Tu lógica existente */ }
+async function buscarPedidoPendientePorTelefono(telefono) {
+    return findPendingOrderByPhone(telefono);
+}
+async function guardarPedido(streamSid, cliente, comandaText, telefono, total) {
+    return createOrder({
+        id: streamSid,
+        businessId: business.id,
+        customerName: cliente,
+        phone: telefono,
+        summary: comandaText,
+        total
+    });
+}
+async function actualizarComandaExistente(orderId, cliente, nuevoResumen, total) {
+    return updateOrder(orderId, {
+        customerName: cliente,
+        summary: nuevoResumen,
+        total
+    });
+}
 
 // ==========================================
 // WEBSOCKET PRINCIPAL: TWILIO ↔ VOICE AGENT
@@ -267,14 +319,10 @@ catch(e){
 
             try {
                 if (pedidoPrevio) {
-                    comandasCocina = comandasCocina.filter(c => c.id !== pedidoPrevio.streamSidAnterior);
-                    comandasCocina.push({ id: streamSid, nombre: nombre_cliente, telefono: clienteTelefono, resumen: resumen_pedido });
-                    await actualizarComandaExistenteEnSheets(pedidoPrevio.fila, resumen_pedido);
+                    await actualizarComandaExistente(pedidoPrevio.id, nombre_cliente, resumen_pedido, total);
                 } else {
-                    comandasCocina.push({ id: streamSid, nombre: nombre_cliente, telefono: clienteTelefono, resumen: resumen_pedido });
-                    await guardarPedidoEnSheets(streamSid, nombre_cliente, resumen_pedido, clienteTelefono);
+                    await guardarPedido(streamSid, nombre_cliente, resumen_pedido, clienteTelefono, total);
                 }
-
                 if (agentWs && agentWs.readyState === WebSocket.OPEN) {
                     agentWs.send(JSON.stringify({
                         type: 'FunctionCallResponse',
