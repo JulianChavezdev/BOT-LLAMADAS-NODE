@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.js",
+    "db:bootstrap": "node prisma/bootstrap-sqlite.js && node prisma/seed.js"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +19,7 @@
   "type": "module",
   "dependencies": {
     "@deepgram/sdk": "^3.13.0",
-    "@prisma/client": "^6.19.3",
+    "@prisma/client": "^5.22.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "googleapis": "^173.0.0",
@@ -30,6 +31,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14",
-    "prisma": "^6.19.3"
+    "prisma": "^5.22.0"
   }
 }

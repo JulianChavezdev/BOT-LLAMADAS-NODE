@@ -62,7 +62,7 @@ model Call {
   customerId String?
   phone      String?
   provider   String     @default("twilio")
-  status     CallStatus @default(active)
+  status     String   @default("active")
   transcript String?
   startedAt  DateTime   @default(now())
   endedAt    DateTime?
@@ -86,7 +86,7 @@ model Order {
   phone        String?
   summary      String
   total        Float?
-  status       OrderStatus @default(pending)
+  status       String   @default("pending")
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   completedAt  DateTime?
@@ -97,16 +97,4 @@ model Order {
 
   @@index([businessId, status])
   @@index([phone])
-}
-
-enum CallStatus {
-  active
-  completed
-  failed
-}
-
-enum OrderStatus {
-  pending
-  completed
-  cancelled
 }

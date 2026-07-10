@@ -29,6 +29,7 @@ El archivo `.env` real no se versiona. Debe contener:
 npm run check
 npm run dev
 npm run db:generate
+npm run db:bootstrap
 npm run db:migrate
 npm run db:seed
 npm run db:studio
@@ -51,6 +52,14 @@ El sistema intenta usar Prisma si `DATABASE_URL` esta configurado. Si Prisma no 
 
 Esto permite mantener la demo funcionando mientras se completa la migracion a base de datos real.
 
+Para desarrollo local en Windows/Node actual, usa:
+
+```powershell
+npm run db:bootstrap
+```
+
+Este comando crea la base SQLite local y carga los datos demo de Bistro Nube. `prisma migrate dev` queda disponible para entornos donde el schema engine funcione correctamente.
+
 ## Estado SaaS
 
 Hecho:
@@ -67,6 +76,5 @@ Hecho:
 
 Siguiente paso recomendado:
 
-- Resolver ejecucion local de migraciones Prisma con runtime Node LTS o entorno de despliegue.
-- Pasar `orderRepository` y `callRepository` a Prisma como storage principal.
+- Probar `prisma migrate dev` en Node LTS/CI o despliegue.
 - Crear panel admin real para negocio, menu, pedidos y llamadas.
