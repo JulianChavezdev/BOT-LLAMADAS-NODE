@@ -45,6 +45,7 @@ npm run db:studio
 - `GET /cocina`: panel demo de cocina.
 - `GET /admin`: panel demo de administracion.
 - `GET /api/business`: configuracion publica del negocio demo.
+- `PATCH /api/business`: edita datos basicos del negocio.
 - `GET /api/menu-items`: productos normalizados del menu con disponibilidad.
 - `POST /api/menu-items`: crea un producto.
 - `PATCH /api/menu-items/:id`: edita un producto.
@@ -112,7 +113,8 @@ Hecho:
 - Autenticacion basica para panel admin, cocina y APIs operativas.
 - Resolucion inicial de tenant por header/query y filtrado de pedidos, llamadas y menu por negocio.
 - CRUD basico de productos desde el panel admin.
+- Edicion basica de nombre, ciudad y modo de servicio del negocio.
 
 Siguiente paso recomendado:
 
-- Editar configuracion del negocio desde el panel admin.
+- Persistir configuracion de voz/agente por negocio.

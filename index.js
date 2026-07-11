@@ -34,7 +34,7 @@ import {
     setMenuItemAvailability,
     updateMenuItem
 } from './src/repositories/menuRepository.js';
-import { getBusinessById } from './src/repositories/businessRepository.js';
+import { getBusinessById, updateBusiness } from './src/repositories/businessRepository.js';
 import { describeAdminAuth, requireAdmin } from './src/middleware/adminAuth.js';
 import { resolveTenant } from './src/middleware/tenantResolver.js';
 
@@ -151,6 +151,31 @@ app.get('/api/business', (req, res) => {
             deepgramLanguage: currentBusiness.voice.deepgramLanguage
         }
     });
+});
+
+app.patch('/api/business', async (req, res) => {
+    const { name, city, serviceMode } = req.body;
+    const allowedServiceModes = new Set(['pickup_only', 'delivery_only', 'pickup_and_delivery']);
+    const data = {
+        name: name === undefined ? undefined : String(name).trim(),
+        city: city === undefined ? undefined : String(city).trim(),
+        serviceMode: serviceMode === undefined ? undefined : String(serviceMode).trim()
+    };
+
+    if (data.name === '' || data.city === '' || (data.serviceMode && !allowedServiceModes.has(data.serviceMode))) {
+        return res.status(400).json({ error: 'datos de negocio invalidos' });
+    }
+
+    const updated = await updateBusiness({
+        id: req.business.id,
+        ...data
+    });
+
+    if (!updated) {
+        return res.status(404).json({ error: 'negocio no encontrado' });
+    }
+
+    res.json({ ok: true, business: updated });
 });
 
 app.get('/api/menu', (req, res) => {

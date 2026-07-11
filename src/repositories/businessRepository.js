@@ -2,11 +2,15 @@ import { defaultBusiness } from '../config/businesses.js';
 import { getPrisma } from '../db/prisma.js';
 
 let prismaUnavailable = false;
+const fallbackBusinessOverrides = new Map();
 
 function mergeBusiness(dbBusiness) {
+    const overrides = fallbackBusinessOverrides.get(dbBusiness.id) || {};
+
     return {
         ...defaultBusiness,
         ...dbBusiness,
+        ...overrides,
         voice: defaultBusiness.voice,
         agent: defaultBusiness.agent
     };
@@ -29,7 +33,7 @@ async function withPrisma(operation, fallback) {
 }
 
 export function getDefaultBusiness() {
-    return defaultBusiness;
+    return mergeBusiness(defaultBusiness);
 }
 
 export async function getBusinessById(id = defaultBusiness.id) {
@@ -45,6 +49,38 @@ export async function getBusinessById(id = defaultBusiness.id) {
 
             return mergeBusiness(business);
         },
-        () => (id === defaultBusiness.id ? defaultBusiness : null)
+        () => (id === defaultBusiness.id ? mergeBusiness(defaultBusiness) : null)
+    );
+}
+
+export async function updateBusiness({ id, name, city, serviceMode }) {
+    const data = {
+        ...(name ? { name } : {}),
+        ...(city ? { city } : {}),
+        ...(serviceMode ? { serviceMode } : {})
+    };
+
+    return withPrisma(
+        async (prisma) => {
+            const result = await prisma.business.updateMany({
+                where: { id },
+                data
+            });
+
+            if (result.count === 0) return null;
+
+            const business = await prisma.business.findUnique({ where: { id } });
+            return mergeBusiness(business);
+        },
+        () => {
+            if (id !== defaultBusiness.id) return null;
+
+            fallbackBusinessOverrides.set(id, {
+                ...(fallbackBusinessOverrides.get(id) || {}),
+                ...data
+            });
+
+            return mergeBusiness(defaultBusiness);
+        }
     );
 }

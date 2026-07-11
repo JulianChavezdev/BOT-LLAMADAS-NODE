@@ -10,7 +10,7 @@
     <header class="border-b border-slate-800 bg-slate-900">
         <div class="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
             <div>
-                <h1 class="text-xl font-semibold">Bistro Nube</h1>
+                <h1 id="business-title" class="text-xl font-semibold">Bistro Nube</h1>
                 <p class="text-sm text-slate-400">Panel admin demo</p>
             </div>
             <a href="/cocina" class="text-sm bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded">Cocina</a>
@@ -82,14 +82,39 @@
         }
 
         function renderBusiness(business) {
+            document.getElementById('business-title').textContent = business.name;
             document.getElementById('business').innerHTML = `
                 <p><span class="text-slate-500">ID:</span> ${escapeHtml(business.id)}</p>
-                <p><span class="text-slate-500">Nombre:</span> ${escapeHtml(business.name)}</p>
-                <p><span class="text-slate-500">Ciudad:</span> ${escapeHtml(business.city)}</p>
                 <p><span class="text-slate-500">Zona horaria:</span> ${escapeHtml(business.timezone)}</p>
-                <p><span class="text-slate-500">Modo:</span> ${escapeHtml(business.serviceMode)}</p>
                 <p><span class="text-slate-500">Voz:</span> ${escapeHtml(business.voice.deepgramSpeakModel)}</p>
+                <form id="business-form" class="space-y-2 pt-2">
+                    <input name="name" value="${escapeHtml(business.name)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="city" value="${escapeHtml(business.city)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <select name="serviceMode" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                        <option value="pickup_only" ${business.serviceMode === 'pickup_only' ? 'selected' : ''}>Solo recogida</option>
+                        <option value="delivery_only" ${business.serviceMode === 'delivery_only' ? 'selected' : ''}>Solo domicilio</option>
+                        <option value="pickup_and_delivery" ${business.serviceMode === 'pickup_and_delivery' ? 'selected' : ''}>Recogida y domicilio</option>
+                    </select>
+                    <button class="w-full bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-2 text-sm font-medium">Guardar</button>
+                </form>
             `;
+
+            document.getElementById('business-form').addEventListener('submit', async event => {
+                event.preventDefault();
+                const formData = new FormData(event.currentTarget);
+
+                await fetchJson('/api/business', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: formData.get('name'),
+                        city: formData.get('city'),
+                        serviceMode: formData.get('serviceMode')
+                    })
+                });
+
+                load();
+            });
         }
 
         function renderMenu(items) {
