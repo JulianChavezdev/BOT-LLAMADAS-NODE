@@ -29,6 +29,7 @@ El archivo `.env` real no se versiona. Debe contener:
 
 ```powershell
 npm run check
+npm run check:env
 npm run dev
 npm run db:generate
 npm run db:bootstrap
@@ -94,6 +95,19 @@ npm run db:bootstrap
 
 Este comando crea la base SQLite local y carga los datos demo de Bistro Nube. `prisma migrate dev` queda disponible para entornos donde el schema engine funcione correctamente.
 
+## Produccion
+
+Antes de desplegar:
+
+```powershell
+npm run check
+npm run check:env
+```
+
+`check:env` falla si faltan claves criticas, si el admin usa credenciales demo o si `DATABASE_URL` sigue apuntando a SQLite local.
+
+Usa `.env.production.example` como base para configurar variables en el proveedor de deploy.
+
 ## Estado SaaS
 
 Hecho:
@@ -115,7 +129,8 @@ Hecho:
 - CRUD basico de productos desde el panel admin.
 - Edicion basica de nombre, ciudad y modo de servicio del negocio.
 - Configuracion de voz y comportamiento del agente por negocio.
+- Validador de variables de entorno para despliegue.
 
 Siguiente paso recomendado:
 
-- Preparar despliegue con Postgres y variables de entorno de produccion.
+- Agregar CI para validar el repo en cada push.
