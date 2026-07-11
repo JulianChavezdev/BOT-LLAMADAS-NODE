@@ -43,20 +43,21 @@ async function writeOrders(orders) {
     await fs.writeFile(ORDERS_FILE, JSON.stringify(orders, null, 2), 'utf8');
 }
 
-export async function listOrders() {
-    return readOrders();
-}
-
-export async function listPendingOrders() {
+export async function listOrders(businessId) {
     const orders = await readOrders();
-    return orders.filter(order => order.status === 'pending');
+    return businessId ? orders.filter(order => order.businessId === businessId) : orders;
 }
 
-export async function findPendingOrderByPhone(phone) {
+export async function listPendingOrders(businessId) {
+    const orders = await readOrders();
+    return orders.filter(order => order.status === 'pending' && (!businessId || order.businessId === businessId));
+}
+
+export async function findPendingOrderByPhone(phone, businessId) {
     if (!phone || phone === 'Desconocido') return null;
 
     const orders = await readOrders();
-    return orders.find(order => order.phone === phone && order.status === 'pending') || null;
+    return orders.find(order => order.phone === phone && order.status === 'pending' && (!businessId || order.businessId === businessId)) || null;
 }
 
 export async function createOrder({ id, businessId, customerName, phone, summary, total, callId }) {
@@ -76,7 +77,7 @@ export async function createOrder({ id, businessId, customerName, phone, summary
     };
 
     if (orders.some(existingOrder => existingOrder.id === id)) {
-        return updateOrder(id, order);
+        return updateOrder(id, order, businessId);
     }
 
     orders.push(order);
@@ -84,9 +85,9 @@ export async function createOrder({ id, businessId, customerName, phone, summary
     return order;
 }
 
-export async function updateOrder(id, updates) {
+export async function updateOrder(id, updates, businessId) {
     const orders = await readOrders();
-    const index = orders.findIndex(order => order.id === id);
+    const index = orders.findIndex(order => order.id === id && (!businessId || order.businessId === businessId));
 
     if (index === -1) return null;
 
@@ -100,11 +101,11 @@ export async function updateOrder(id, updates) {
     return orders[index];
 }
 
-export async function completeOrder(id) {
+export async function completeOrder(id, businessId) {
     return updateOrder(id, {
         status: 'completed',
         completedAt: new Date().toISOString()
-    });
+    }, businessId);
 }
 
 export async function createCall({ id, businessId, phone, provider = 'twilio' }) {
@@ -160,7 +161,9 @@ export async function finishCall(id, status = 'completed') {
     });
 }
 
-export async function listCalls() {
+export async function listCalls(businessId) {
     const calls = await readJsonFile(CALLS_FILE);
-    return calls.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+    return calls
+        .filter(call => !businessId || call.businessId === businessId)
+        .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
 }

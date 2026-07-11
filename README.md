@@ -65,6 +65,17 @@ password: bistro-demo
 
 En produccion define siempre `ADMIN_USERNAME` y `ADMIN_PASSWORD`.
 
+## Tenants
+
+El negocio activo se resuelve por:
+
+- Header `X-Business-Id`
+- Query string `?businessId=...`
+- Query string `?tenant=...`
+- Default demo: `bistro-nube`
+
+El webhook `/twilio-voice` tambien acepta `businessId` o `tenant` y lo pasa al WebSocket de Twilio como `BusinessId`.
+
 ## Persistencia
 
 El sistema intenta usar Prisma si `DATABASE_URL` esta configurado. Si Prisma no esta disponible, cae automaticamente a JSON local en `data/`.
@@ -96,7 +107,8 @@ Hecho:
 - Gestion basica de disponibilidad de productos.
 - El agente de voz construye su prompt con productos disponibles desde la base de datos.
 - Autenticacion basica para panel admin, cocina y APIs operativas.
+- Resolucion inicial de tenant por header/query y filtrado de pedidos, llamadas y menu por negocio.
 
 Siguiente paso recomendado:
 
-- Resolver negocio por tenant para soportar varios restaurantes.
+- Crear CRUD de menu en el panel admin.

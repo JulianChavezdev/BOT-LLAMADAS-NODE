@@ -122,16 +122,17 @@ export async function finishCall(id, status = 'completed') {
     );
 }
 
-export async function listCalls() {
+export async function listCalls(businessId = defaultBusiness.id) {
     return withPrisma(
         async (prisma) => {
             const calls = await prisma.call.findMany({
+                where: { businessId },
                 orderBy: { startedAt: 'desc' },
                 take: 100
             });
 
             return calls.map(serializeCall);
         },
-        () => jsonStore.listCalls()
+        () => jsonStore.listCalls(businessId)
     );
 }

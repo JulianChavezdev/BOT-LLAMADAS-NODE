@@ -28,7 +28,9 @@ import {
 } from './src/repositories/orderRepository.js';
 import { finishCall, listCalls, startCall } from './src/repositories/callRepository.js';
 import { listMenuItems, setMenuItemAvailability } from './src/repositories/menuRepository.js';
+import { getBusinessById } from './src/repositories/businessRepository.js';
 import { describeAdminAuth, requireAdmin } from './src/middleware/adminAuth.js';
+import { resolveTenant } from './src/middleware/tenantResolver.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -74,9 +76,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const menu = bistroNubeMenu;
 
-async function buildCurrentSystemPrompt() {
-    const menuItems = await listMenuItems(business.id);
-    return buildSystemPrompt({ business, menuItems });
+async function buildCurrentSystemPrompt(currentBusiness) {
+    const menuItems = await listMenuItems(currentBusiness.id);
+    return buildSystemPrompt({ business: currentBusiness, menuItems });
 }
 
 app.get('/health', (req, res) => {
@@ -92,15 +94,17 @@ app.get('/health', (req, res) => {
 // ==========================================
 app.get('/cocina', requireAdmin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'cocina.html')));
 app.get('/admin', requireAdmin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
-app.post('/twilio-voice', (req, res) => {
+app.post('/twilio-voice', resolveTenant, (req, res) => {
+    const currentBusiness = req.business;
     const numeroLlamante = req.body.From || 'Desconocido';
     res.type('text/xml');
     res.send(`
         <Response>
-            <Say language="${business.voice.twilioLanguage}" voice="${business.voice.twilioVoice}">Conectando con el asistente de ${business.name}.</Say>
+            <Say language="${currentBusiness.voice.twilioLanguage}" voice="${currentBusiness.voice.twilioVoice}">Conectando con el asistente de ${currentBusiness.name}.</Say>
             <Connect>
                 <Stream url="wss://${req.headers.host}/media-stream">
                     <Parameter name="From" value="${numeroLlamante}" />
+                    <Parameter name="BusinessId" value="${currentBusiness.id}" />
                 </Stream>
             </Connect>
         </Response>
@@ -108,9 +112,10 @@ app.post('/twilio-voice', (req, res) => {
 });
 
 app.use(['/api', '/cocina/completar'], requireAdmin);
+app.use(['/api', '/cocina/completar'], resolveTenant);
 
 app.get('/api/pedidos', async (req, res) => {
-    const orders = await listPendingOrders();
+    const orders = await listPendingOrders(req.business.id);
     res.json(orders.map(order => ({
         id: order.id,
         nombre: order.customerName,
@@ -122,21 +127,22 @@ app.get('/api/pedidos', async (req, res) => {
 });
 
 app.get('/api/business', (req, res) => {
+    const currentBusiness = req.business;
     res.json({
-        id: business.id,
-        name: business.name,
-        city: business.city,
-        country: business.country,
-        locale: business.locale,
-        timezone: business.timezone,
-        serviceMode: business.serviceMode,
+        id: currentBusiness.id,
+        name: currentBusiness.name,
+        city: currentBusiness.city,
+        country: currentBusiness.country,
+        locale: currentBusiness.locale,
+        timezone: currentBusiness.timezone,
+        serviceMode: currentBusiness.serviceMode,
         voice: {
-            greeting: business.voice.greeting,
-            twilioLanguage: business.voice.twilioLanguage,
-            twilioVoice: business.voice.twilioVoice,
-            deepgramSpeakModel: business.voice.deepgramSpeakModel,
-            deepgramListenModel: business.voice.deepgramListenModel,
-            deepgramLanguage: business.voice.deepgramLanguage
+            greeting: currentBusiness.voice.greeting,
+            twilioLanguage: currentBusiness.voice.twilioLanguage,
+            twilioVoice: currentBusiness.voice.twilioVoice,
+            deepgramSpeakModel: currentBusiness.voice.deepgramSpeakModel,
+            deepgramListenModel: currentBusiness.voice.deepgramListenModel,
+            deepgramLanguage: currentBusiness.voice.deepgramLanguage
         }
     });
 });
@@ -146,7 +152,7 @@ app.get('/api/menu', (req, res) => {
 });
 
 app.get('/api/menu-items', async (req, res) => {
-    const items = await listMenuItems(business.id);
+    const items = await listMenuItems(req.business.id);
     res.json(items);
 });
 
@@ -158,7 +164,7 @@ app.patch('/api/menu-items/:id/availability', async (req, res) => {
     }
 
     const item = await setMenuItemAvailability({
-        businessId: business.id,
+        businessId: req.business.id,
         id: req.params.id,
         available
     });
@@ -171,12 +177,12 @@ app.patch('/api/menu-items/:id/availability', async (req, res) => {
 });
 
 app.get('/api/pedidos/todos', async (req, res) => {
-    const orders = await listOrders();
+    const orders = await listOrders(req.business.id);
     res.json(orders);
 });
 
 app.get('/api/llamadas', async (req, res) => {
-    const calls = await listCalls();
+    const calls = await listCalls(req.business.id);
     res.json(calls);
 });
 
@@ -187,7 +193,7 @@ app.post('/cocina/completar', async (req, res) => {
         return res.status(400).json({ error: 'id requerido' });
     }
 
-    const order = await completeOrder(id);
+    const order = await completeOrder(id, req.business.id);
 
     if (!order) {
         return res.status(404).json({ error: 'pedido no encontrado' });
@@ -198,13 +204,13 @@ app.post('/cocina/completar', async (req, res) => {
 
 async function enviarMensajePedidoListo(telefono, nombre) { /* Tu lógica existente */ }
 async function obtenerNombrePrimeraHoja(sheetsClient, sheetId) { /* Tu lógica existente */ }
-async function buscarPedidoPendientePorTelefono(telefono) {
-    return findPendingOrderByPhone(telefono);
+async function buscarPedidoPendientePorTelefono(telefono, businessId) {
+    return findPendingOrderByPhone(telefono, businessId);
 }
-async function guardarPedido(streamSid, cliente, comandaText, telefono, total) {
+async function guardarPedido(streamSid, cliente, comandaText, telefono, total, currentBusiness) {
     return createOrder({
         id: streamSid,
-        businessId: business.id,
+        businessId: currentBusiness.id,
         callId: streamSid,
         customerName: cliente,
         phone: telefono,
@@ -212,12 +218,12 @@ async function guardarPedido(streamSid, cliente, comandaText, telefono, total) {
         total
     });
 }
-async function actualizarComandaExistente(orderId, cliente, nuevoResumen, total) {
+async function actualizarComandaExistente(orderId, cliente, nuevoResumen, total, businessId) {
     return updateOrder(orderId, {
         customerName: cliente,
         summary: nuevoResumen,
         total
-    });
+    }, businessId);
 }
 
 // ==========================================
@@ -238,6 +244,7 @@ wss.on('connection', (twilioWs, req) => {
     let agentWs = null;
     let agentReady = false; // <-- CRÍTICO: El cerrojo lógico de conexión
     let callClosed = false;
+    let activeBusiness = business;
 
     async function cerrarRegistroLlamada(status = 'completed') {
         if (!streamSid || callClosed) return;
@@ -287,7 +294,7 @@ function conectarVoiceAgent() {
                 case 'Welcome':
                     console.log(`👋 Welcome recibido (ID: ${event.request_id}). Enviando configuración plana oficial...`);
                     
-                    const systemPrompt = await buildCurrentSystemPrompt();
+                    const systemPrompt = await buildCurrentSystemPrompt(activeBusiness);
                     console.log('Menu disponible cargado para Voice Agent.');
 
                     // ESQUEMA OFICIAL DE DEEPGRAM PARA VOICE AGENT CON TWILIO
@@ -308,8 +315,8 @@ const config = {
         listen: {
             provider: {
                 type: "deepgram",
-                model: business.voice.deepgramListenModel,
-                language: business.voice.deepgramLanguage,
+                model: activeBusiness.voice.deepgramListenModel,
+                language: activeBusiness.voice.deepgramLanguage,
                 smart_format: false
             }
         },
@@ -324,10 +331,10 @@ const config = {
         speak: {
             provider: {
                 type: "deepgram",
-                model: business.voice.deepgramSpeakModel
+                model: activeBusiness.voice.deepgramSpeakModel
             }
         },
-        greeting: business.voice.greeting
+        greeting: activeBusiness.voice.greeting
     }
 }; 
 console.log("ENVIANDO SETTINGS");
@@ -414,9 +421,9 @@ catch(e){
 
             try {
                 if (pedidoPrevio) {
-                    await actualizarComandaExistente(pedidoPrevio.id, nombre_cliente, resumen_pedido, total);
+                    await actualizarComandaExistente(pedidoPrevio.id, nombre_cliente, resumen_pedido, total, activeBusiness.id);
                 } else {
-                    await guardarPedido(streamSid, nombre_cliente, resumen_pedido, clienteTelefono, total);
+                    await guardarPedido(streamSid, nombre_cliente, resumen_pedido, clienteTelefono, total, activeBusiness);
                 }
                 if (agentWs && agentWs.readyState === WebSocket.OPEN) {
                     agentWs.send(JSON.stringify({
@@ -455,14 +462,15 @@ catch(e){
             case 'start':
                 streamSid = data.start.streamSid;
                 clienteTelefono = data.start.customParameters?.From || 'Desconocido';
+                activeBusiness = await getBusinessById(data.start.customParameters?.BusinessId || business.id) || business;
                 console.log(`🆔 Stream iniciado. SID: ${streamSid} | Teléfono: ${clienteTelefono}`);
 
                 await startCall({
                     id: streamSid,
-                    businessId: business.id,
+                    businessId: activeBusiness.id,
                     phone: clienteTelefono
                 });
-                pedidoPrevio = await buscarPedidoPendientePorTelefono(clienteTelefono);
+                pedidoPrevio = await buscarPedidoPendientePorTelefono(clienteTelefono, activeBusiness.id);
                 conectarVoiceAgent();
                 break;
 

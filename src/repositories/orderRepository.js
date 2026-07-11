@@ -77,38 +77,40 @@ async function upsertCustomer(prisma, { businessId, customerName, phone }) {
     });
 }
 
-export async function listOrders() {
+export async function listOrders(businessId = defaultBusiness.id) {
     return withPrisma(
         async (prisma) => {
             const orders = await prisma.order.findMany({
+                where: { businessId },
                 orderBy: { createdAt: 'desc' }
             });
             return orders.map(serializeOrder);
         },
-        () => jsonStore.listOrders()
+        () => jsonStore.listOrders(businessId)
     );
 }
 
-export async function listPendingOrders() {
+export async function listPendingOrders(businessId = defaultBusiness.id) {
     return withPrisma(
         async (prisma) => {
             const orders = await prisma.order.findMany({
-                where: { status: 'pending' },
+                where: { businessId, status: 'pending' },
                 orderBy: { createdAt: 'asc' }
             });
             return orders.map(serializeOrder);
         },
-        () => jsonStore.listPendingOrders()
+        () => jsonStore.listPendingOrders(businessId)
     );
 }
 
-export async function findPendingOrderByPhone(phone) {
+export async function findPendingOrderByPhone(phone, businessId = defaultBusiness.id) {
     return withPrisma(
         async (prisma) => {
             if (!phone || phone === 'Desconocido') return null;
 
             const order = await prisma.order.findFirst({
                 where: {
+                    businessId,
                     phone,
                     status: 'pending'
                 },
@@ -117,7 +119,7 @@ export async function findPendingOrderByPhone(phone) {
 
             return serializeOrder(order);
         },
-        () => jsonStore.findPendingOrderByPhone(phone)
+        () => jsonStore.findPendingOrderByPhone(phone, businessId)
     );
 }
 
@@ -157,33 +159,39 @@ export async function createOrder({ id, businessId, customerName, phone, summary
     );
 }
 
-export async function updateOrder(id, updates) {
+export async function updateOrder(id, updates, businessId = defaultBusiness.id) {
     return withPrisma(
         async (prisma) => {
-            const order = await prisma.order.update({
-                where: { id },
+            const result = await prisma.order.updateMany({
+                where: { id, businessId },
                 data: updates
             });
 
+            if (result.count === 0) return null;
+
+            const order = await prisma.order.findUnique({ where: { id } });
             return serializeOrder(order);
         },
-        () => jsonStore.updateOrder(id, updates)
+        () => jsonStore.updateOrder(id, updates, businessId)
     );
 }
 
-export async function completeOrder(id) {
+export async function completeOrder(id, businessId = defaultBusiness.id) {
     return withPrisma(
         async (prisma) => {
-            const order = await prisma.order.update({
-                where: { id },
+            const result = await prisma.order.updateMany({
+                where: { id, businessId },
                 data: {
                     status: 'completed',
                     completedAt: new Date()
                 }
             });
 
+            if (result.count === 0) return null;
+
+            const order = await prisma.order.findUnique({ where: { id } });
             return serializeOrder(order);
         },
-        () => jsonStore.completeOrder(id)
+        () => jsonStore.completeOrder(id, businessId)
     );
 }
