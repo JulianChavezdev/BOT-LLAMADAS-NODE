@@ -46,7 +46,10 @@ npm run db:studio
 - `GET /admin`: panel demo de administracion.
 - `GET /api/business`: configuracion publica del negocio demo.
 - `GET /api/menu-items`: productos normalizados del menu con disponibilidad.
+- `POST /api/menu-items`: crea un producto.
+- `PATCH /api/menu-items/:id`: edita un producto.
 - `PATCH /api/menu-items/:id/availability`: activa o desactiva un producto.
+- `DELETE /api/menu-items/:id`: elimina un producto.
 - `GET /api/pedidos`: pedidos pendientes.
 - `GET /api/pedidos/todos`: historial de pedidos.
 - `GET /api/llamadas`: historial de llamadas.
@@ -108,7 +111,8 @@ Hecho:
 - El agente de voz construye su prompt con productos disponibles desde la base de datos.
 - Autenticacion basica para panel admin, cocina y APIs operativas.
 - Resolucion inicial de tenant por header/query y filtrado de pedidos, llamadas y menu por negocio.
+- CRUD basico de productos desde el panel admin.
 
 Siguiente paso recomendado:
 
-- Crear CRUD de menu en el panel admin.
+- Editar configuracion del negocio desde el panel admin.

@@ -27,7 +27,13 @@ import {
     updateOrder
 } from './src/repositories/orderRepository.js';
 import { finishCall, listCalls, startCall } from './src/repositories/callRepository.js';
-import { listMenuItems, setMenuItemAvailability } from './src/repositories/menuRepository.js';
+import {
+    createMenuItem,
+    deleteMenuItem,
+    listMenuItems,
+    setMenuItemAvailability,
+    updateMenuItem
+} from './src/repositories/menuRepository.js';
 import { getBusinessById } from './src/repositories/businessRepository.js';
 import { describeAdminAuth, requireAdmin } from './src/middleware/adminAuth.js';
 import { resolveTenant } from './src/middleware/tenantResolver.js';
@@ -156,6 +162,26 @@ app.get('/api/menu-items', async (req, res) => {
     res.json(items);
 });
 
+app.post('/api/menu-items', async (req, res) => {
+    const { category, name, description = '', price, available = true } = req.body;
+    const numericPrice = Number(price);
+
+    if (!category || !name || !Number.isFinite(numericPrice) || numericPrice < 0) {
+        return res.status(400).json({ error: 'category, name y price valido son requeridos' });
+    }
+
+    const item = await createMenuItem({
+        businessId: req.business.id,
+        category: String(category).trim(),
+        name: String(name).trim(),
+        description: String(description || '').trim(),
+        price: numericPrice,
+        available: available !== false
+    });
+
+    res.status(201).json(item);
+});
+
 app.patch('/api/menu-items/:id/availability', async (req, res) => {
     const { available } = req.body;
 
@@ -174,6 +200,45 @@ app.patch('/api/menu-items/:id/availability', async (req, res) => {
     }
 
     res.json({ ok: true, item });
+});
+
+app.patch('/api/menu-items/:id', async (req, res) => {
+    const { category, name, description, price } = req.body;
+    const data = {
+        category: category === undefined ? undefined : String(category).trim(),
+        name: name === undefined ? undefined : String(name).trim(),
+        description: description === undefined ? undefined : String(description || '').trim(),
+        price: price === undefined ? undefined : Number(price)
+    };
+
+    if (data.category === '' || data.name === '' || (data.price !== undefined && (!Number.isFinite(data.price) || data.price < 0))) {
+        return res.status(400).json({ error: 'datos de producto invalidos' });
+    }
+
+    const item = await updateMenuItem({
+        businessId: req.business.id,
+        id: req.params.id,
+        ...data
+    });
+
+    if (!item) {
+        return res.status(404).json({ error: 'producto no encontrado' });
+    }
+
+    res.json({ ok: true, item });
+});
+
+app.delete('/api/menu-items/:id', async (req, res) => {
+    const deleted = await deleteMenuItem({
+        businessId: req.business.id,
+        id: req.params.id
+    });
+
+    if (!deleted) {
+        return res.status(404).json({ error: 'producto no encontrado' });
+    }
+
+    res.status(204).send();
 });
 
 app.get('/api/pedidos/todos', async (req, res) => {

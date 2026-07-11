@@ -28,6 +28,13 @@
 
             <div class="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Menu</h2>
+                <form id="menu-form" class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-4">
+                    <input name="name" required placeholder="Producto" class="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm md:col-span-1">
+                    <input name="category" required placeholder="Categoria" class="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm md:col-span-1">
+                    <input name="price" required type="number" min="0" step="0.01" placeholder="Precio" class="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm md:col-span-1">
+                    <input name="description" placeholder="Descripcion" class="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm md:col-span-1">
+                    <button class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-2 text-sm font-medium">Agregar</button>
+                </form>
                 <div id="menu" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
             </div>
         </section>
@@ -47,9 +54,11 @@
 
     <script>
         const money = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
+        let menuItemsCache = [];
 
-        async function fetchJson(url) {
-            const response = await fetch(url);
+        async function fetchJson(url, options) {
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
         }
 
@@ -84,6 +93,7 @@
         }
 
         function renderMenu(items) {
+            menuItemsCache = items;
             const html = items.map(item => `
                     <article class="border border-slate-800 rounded-lg p-3">
                         <div class="flex justify-between gap-3">
@@ -92,15 +102,19 @@
                         </div>
                         <p class="text-xs uppercase tracking-wide text-slate-500 mt-1">${escapeHtml(item.category)}</p>
                         <p class="text-sm text-slate-400 mt-2">${escapeHtml(item.description)}</p>
-                        <button data-menu-id="${item.id}" data-available="${!item.available}" class="mt-3 text-xs px-2 py-1 rounded ${item.available ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-slate-700 hover:bg-slate-600'}">
-                            ${item.available ? 'Disponible' : 'No disponible'}
-                        </button>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button data-menu-action="availability" data-menu-id="${escapeHtml(item.id)}" data-available="${!item.available}" class="text-xs px-2 py-1 rounded ${item.available ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-slate-700 hover:bg-slate-600'}">
+                                ${item.available ? 'Disponible' : 'No disponible'}
+                            </button>
+                            <button data-menu-action="edit" data-menu-id="${escapeHtml(item.id)}" class="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Editar</button>
+                            <button data-menu-action="delete" data-menu-id="${escapeHtml(item.id)}" class="text-xs px-2 py-1 rounded bg-red-900 hover:bg-red-800">Eliminar</button>
+                        </div>
                     </article>
                 `).join('');
 
             document.getElementById('menu').innerHTML = html || '<p class="text-slate-500">Sin productos.</p>';
 
-            document.querySelectorAll('[data-menu-id]').forEach(button => {
+            document.querySelectorAll('[data-menu-action="availability"]').forEach(button => {
                 button.addEventListener('click', async () => {
                     button.disabled = true;
                     const response = await fetch(`/api/menu-items/${encodeURIComponent(button.dataset.menuId)}/availability`, {
@@ -109,6 +123,42 @@
                         body: JSON.stringify({ available: button.dataset.available === 'true' })
                     });
                     if (!response.ok) throw new Error('No se pudo actualizar el producto');
+                    load();
+                });
+            });
+
+            document.querySelectorAll('[data-menu-action="edit"]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const item = menuItemsCache.find(menuItem => menuItem.id === button.dataset.menuId);
+                    if (!item) return;
+
+                    const name = prompt('Producto', item.name);
+                    if (name === null) return;
+                    const category = prompt('Categoria', item.category);
+                    if (category === null) return;
+                    const price = prompt('Precio', item.price);
+                    if (price === null) return;
+                    const description = prompt('Descripcion', item.description || '');
+                    if (description === null) return;
+
+                    await fetchJson(`/api/menu-items/${encodeURIComponent(item.id)}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, category, price, description })
+                    });
+                    load();
+                });
+            });
+
+            document.querySelectorAll('[data-menu-action="delete"]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const item = menuItemsCache.find(menuItem => menuItem.id === button.dataset.menuId);
+                    if (!item || !confirm(`Eliminar ${item.name}?`)) return;
+
+                    const response = await fetch(`/api/menu-items/${encodeURIComponent(item.id)}`, {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) throw new Error('No se pudo eliminar el producto');
                     load();
                 });
             });
@@ -164,6 +214,26 @@
         load().catch(error => {
             console.error(error);
             document.body.insertAdjacentHTML('beforeend', '<p class="p-5 text-red-400">Error cargando panel admin.</p>');
+        });
+
+        document.getElementById('menu-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const formData = new FormData(form);
+
+            await fetchJson('/api/menu-items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.get('name'),
+                    category: formData.get('category'),
+                    price: formData.get('price'),
+                    description: formData.get('description')
+                })
+            });
+
+            form.reset();
+            load();
         });
     </script>
 </body>

@@ -1,8 +1,12 @@
+import crypto from 'crypto';
 import { getPrisma } from '../db/prisma.js';
 import { bistroNubeMenu } from '../config/menus/bistroNubeMenu.js';
 
 let prismaUnavailable = false;
 const fallbackAvailability = new Map();
+const fallbackOverrides = new Map();
+const fallbackDeleted = new Set();
+const fallbackCreated = [];
 
 function slug(value) {
     return value
@@ -14,12 +18,12 @@ function slug(value) {
 }
 
 function fallbackItems() {
-    return Object.entries(bistroNubeMenu).flatMap(([category, items]) => {
+    const configuredItems = Object.entries(bistroNubeMenu).flatMap(([category, items]) => {
         if (!Array.isArray(items)) return [];
 
         return items.map(item => {
             const id = `${category}:${slug(item.nombre)}`;
-            return {
+            const baseItem = {
                 id,
                 category,
                 name: item.nombre,
@@ -30,8 +34,16 @@ function fallbackItems() {
                 price: item.precio,
                 available: fallbackAvailability.has(id) ? fallbackAvailability.get(id) : true
             };
+
+            return {
+                ...baseItem,
+                ...fallbackOverrides.get(id)
+            };
         });
     });
+
+    return [...configuredItems, ...fallbackCreated]
+        .filter(item => !fallbackDeleted.has(item.id));
 }
 
 async function withPrisma(operation, fallback) {
@@ -85,6 +97,97 @@ export async function setMenuItemAvailability({ businessId, id, available }) {
                 businessId,
                 available
             };
+        }
+    );
+}
+
+export async function createMenuItem({ businessId, category, name, description = '', price, available = true }) {
+    return withPrisma(
+        (prisma) => prisma.menuItem.create({
+            data: {
+                businessId,
+                category,
+                name,
+                description,
+                price,
+                available
+            }
+        }),
+        () => {
+            const item = {
+                id: `custom:${crypto.randomUUID()}`,
+                businessId,
+                category,
+                name,
+                description,
+                price,
+                available
+            };
+
+            fallbackCreated.push(item);
+            return item;
+        }
+    );
+}
+
+export async function updateMenuItem({ businessId, id, category, name, description, price }) {
+    const data = {
+        ...(category ? { category } : {}),
+        ...(name ? { name } : {}),
+        ...(description !== undefined ? { description } : {}),
+        ...(price !== undefined ? { price } : {})
+    };
+
+    return withPrisma(
+        async (prisma) => {
+            const result = await prisma.menuItem.updateMany({
+                where: { id, businessId },
+                data
+            });
+
+            if (result.count === 0) return null;
+
+            return prisma.menuItem.findUnique({ where: { id } });
+        },
+        () => {
+            const item = fallbackItems().find(menuItem => menuItem.id === id);
+            if (!item) return null;
+
+            const updated = { ...item, ...data, businessId };
+            const createdIndex = fallbackCreated.findIndex(menuItem => menuItem.id === id);
+
+            if (createdIndex >= 0) {
+                fallbackCreated[createdIndex] = updated;
+            } else {
+                fallbackOverrides.set(id, data);
+            }
+
+            return updated;
+        }
+    );
+}
+
+export async function deleteMenuItem({ businessId, id }) {
+    return withPrisma(
+        async (prisma) => {
+            const result = await prisma.menuItem.deleteMany({
+                where: { id, businessId }
+            });
+
+            return result.count > 0;
+        },
+        () => {
+            const item = fallbackItems().find(menuItem => menuItem.id === id);
+            if (!item) return false;
+
+            const createdIndex = fallbackCreated.findIndex(menuItem => menuItem.id === id);
+            if (createdIndex >= 0) {
+                fallbackCreated.splice(createdIndex, 1);
+            } else {
+                fallbackDeleted.add(id);
+            }
+
+            return true;
         }
     );
 }
