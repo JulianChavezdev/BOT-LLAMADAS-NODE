@@ -29,6 +29,7 @@ El archivo `.env` real no se versiona. Debe contener:
 
 ```powershell
 npm run check
+npm run check:schema
 npm run check:env
 npm run dev
 npm run db:generate
@@ -130,7 +131,8 @@ Hecho:
 - Edicion basica de nombre, ciudad y modo de servicio del negocio.
 - Configuracion de voz y comportamiento del agente por negocio.
 - Validador de variables de entorno para despliegue.
+- CI basico en GitHub Actions para instalar, generar Prisma, validar schema y revisar sintaxis.
 
 Siguiente paso recomendado:
 
-- Agregar CI para validar el repo en cada push.
+- Preparar despliegue real con Postgres en el proveedor elegido.
