@@ -28,12 +28,14 @@ import {
 } from './src/repositories/orderRepository.js';
 import { finishCall, listCalls, startCall } from './src/repositories/callRepository.js';
 import { listMenuItems, setMenuItemAvailability } from './src/repositories/menuRepository.js';
+import { describeAdminAuth, requireAdmin } from './src/middleware/adminAuth.js';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 5050;
 const business = defaultBusiness;
+const adminAuthStatus = describeAdminAuth();
 
 console.log("==========================================");
 console.log("🔑 AUDITORÍA DE CREDENCIALES:");
@@ -42,6 +44,12 @@ console.log("OpenAI Key:", process.env.OPENAI_API_KEY ? "✅ configurada" : "❌
 console.log("GOOGLE_SHEET_ID:", process.env.GOOGLE_SHEET_ID ? "✅ configurada" : "❌ NO DETECTADA");
 console.log("TWILIO_WHATSAPP_FROM:", process.env.TWILIO_WHATSAPP_FROM ? `✅ (${process.env.TWILIO_WHATSAPP_FROM})` : "❌ NO DETECTADA");
 console.log("==========================================");
+
+if (adminAuthStatus.usingDefaultCredentials) {
+    console.warn(`Admin Auth en modo demo: ${adminAuthStatus.username} / ${process.env.ADMIN_PASSWORD || 'bistro-demo'}`);
+} else {
+    console.log(`Admin Auth configurada para usuario: ${adminAuthStatus.username}`);
+}
 
 // Clientes API
 const clientTwilio = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -55,6 +63,13 @@ const sheets = google.sheets({ version: 'v4', auth: authSheets });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+    if (req.path === '/admin.html' || req.path === '/cocina.html') {
+        return requireAdmin(req, res, next);
+    }
+
+    next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 const menu = bistroNubeMenu;
@@ -75,8 +90,8 @@ app.get('/health', (req, res) => {
 // ==========================================
 // RUTAS HTTP Y FUNCIONES DE NEGOCIO SE MANTIENEN IGUALES
 // ==========================================
-app.get('/cocina', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cocina.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/cocina', requireAdmin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'cocina.html')));
+app.get('/admin', requireAdmin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.post('/twilio-voice', (req, res) => {
     const numeroLlamante = req.body.From || 'Desconocido';
     res.type('text/xml');
@@ -91,6 +106,8 @@ app.post('/twilio-voice', (req, res) => {
         </Response>
     `);
 });
+
+app.use(['/api', '/cocina/completar'], requireAdmin);
 
 app.get('/api/pedidos', async (req, res) => {
     const orders = await listPendingOrders();

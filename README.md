@@ -16,6 +16,8 @@ El archivo `.env` real no se versiona. Debe contener:
 
 - `PORT`
 - `DATABASE_URL`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
 - `DEEPGRAM_API_KEY`
 - `OPENAI_API_KEY`
 - `TWILIO_ACCOUNT_SID`
@@ -50,6 +52,19 @@ npm run db:studio
 - `GET /api/llamadas`: historial de llamadas.
 - `POST /cocina/completar`: marca un pedido como completado.
 
+## Acceso Admin
+
+Los paneles `/admin` y `/cocina`, junto con las APIs operativas, usan autenticacion HTTP Basic.
+
+Credenciales demo por defecto:
+
+```text
+usuario: admin
+password: bistro-demo
+```
+
+En produccion define siempre `ADMIN_USERNAME` y `ADMIN_PASSWORD`.
+
 ## Persistencia
 
 El sistema intenta usar Prisma si `DATABASE_URL` esta configurado. Si Prisma no esta disponible, cae automaticamente a JSON local en `data/`.
@@ -80,7 +95,8 @@ Hecho:
 - Panel admin demo para revisar negocio, menu, pedidos y llamadas.
 - Gestion basica de disponibilidad de productos.
 - El agente de voz construye su prompt con productos disponibles desde la base de datos.
+- Autenticacion basica para panel admin, cocina y APIs operativas.
 
 Siguiente paso recomendado:
 
-- Agregar autenticacion simple al panel admin y proteger las APIs operativas.
+- Resolver negocio por tenant para soportar varios restaurantes.
