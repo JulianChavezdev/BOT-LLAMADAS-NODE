@@ -95,6 +95,14 @@
                         <option value="delivery_only" ${business.serviceMode === 'delivery_only' ? 'selected' : ''}>Solo domicilio</option>
                         <option value="pickup_and_delivery" ${business.serviceMode === 'pickup_and_delivery' ? 'selected' : ''}>Recogida y domicilio</option>
                     </select>
+                    <textarea name="voiceGreeting" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">${escapeHtml(business.voice.greeting)}</textarea>
+                    <input name="twilioLanguage" value="${escapeHtml(business.voice.twilioLanguage)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="twilioVoice" value="${escapeHtml(business.voice.twilioVoice)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="deepgramSpeakModel" value="${escapeHtml(business.voice.deepgramSpeakModel)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="deepgramListenModel" value="${escapeHtml(business.voice.deepgramListenModel)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="deepgramLanguage" value="${escapeHtml(business.voice.deepgramLanguage)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="agentStyle" value="${escapeHtml(business.agent.style)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="agentMaxResponseSentences" type="number" min="1" max="5" value="${escapeHtml(business.agent.maxResponseSentences)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
                     <button class="w-full bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-2 text-sm font-medium">Guardar</button>
                 </form>
             `;
@@ -109,7 +117,15 @@
                     body: JSON.stringify({
                         name: formData.get('name'),
                         city: formData.get('city'),
-                        serviceMode: formData.get('serviceMode')
+                        serviceMode: formData.get('serviceMode'),
+                        voiceGreeting: formData.get('voiceGreeting'),
+                        twilioLanguage: formData.get('twilioLanguage'),
+                        twilioVoice: formData.get('twilioVoice'),
+                        deepgramSpeakModel: formData.get('deepgramSpeakModel'),
+                        deepgramListenModel: formData.get('deepgramListenModel'),
+                        deepgramLanguage: formData.get('deepgramLanguage'),
+                        agentStyle: formData.get('agentStyle'),
+                        agentMaxResponseSentences: formData.get('agentMaxResponseSentences')
                     })
                 });
 

@@ -7,7 +7,7 @@ export const defaultBusiness = {
     timezone: "Europe/Madrid",
     serviceMode: "pickup_only",
     voice: {
-        greeting: "Hola, Bistro Nube, habla tu asistente. ¿Qué te apetece pedir hoy?",
+        greeting: "Hola, Bistro Nube, habla tu asistente. Que te apetece pedir hoy?",
         twilioLanguage: "es-MX",
         twilioVoice: "Polly.Mia",
         deepgramSpeakModel: "aura-2-gloria-es",
@@ -15,7 +15,7 @@ export const defaultBusiness = {
         deepgramLanguage: "es"
     },
     agent: {
-        style: "tono cálido, claro y profesional",
+        style: "tono calido, claro y profesional",
         maxResponseSentences: 2
     }
 };

@@ -33,6 +33,14 @@ CREATE TABLE IF NOT EXISTS "Business" (
   "locale" TEXT NOT NULL DEFAULT 'es-ES',
   "timezone" TEXT NOT NULL DEFAULT 'Europe/Madrid',
   "serviceMode" TEXT NOT NULL DEFAULT 'pickup_only',
+  "voiceGreeting" TEXT,
+  "twilioLanguage" TEXT,
+  "twilioVoice" TEXT,
+  "deepgramSpeakModel" TEXT,
+  "deepgramListenModel" TEXT,
+  "deepgramLanguage" TEXT,
+  "agentStyle" TEXT,
+  "agentMaxResponseSentences" INTEGER,
   "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -102,6 +110,24 @@ CREATE INDEX IF NOT EXISTS "Call_phone_idx" ON "Call" ("phone");
 CREATE INDEX IF NOT EXISTS "Order_businessId_status_idx" ON "Order" ("businessId", "status");
 CREATE INDEX IF NOT EXISTS "Order_phone_idx" ON "Order" ("phone");
 `);
+
+function addColumnIfMissing(tableName, columnName, definition) {
+    const columns = db.prepare(`PRAGMA table_info("${tableName}")`).all();
+    const exists = columns.some(column => column.name === columnName);
+
+    if (!exists) {
+        db.exec(`ALTER TABLE "${tableName}" ADD COLUMN "${columnName}" ${definition}`);
+    }
+}
+
+addColumnIfMissing('Business', 'voiceGreeting', 'TEXT');
+addColumnIfMissing('Business', 'twilioLanguage', 'TEXT');
+addColumnIfMissing('Business', 'twilioVoice', 'TEXT');
+addColumnIfMissing('Business', 'deepgramSpeakModel', 'TEXT');
+addColumnIfMissing('Business', 'deepgramListenModel', 'TEXT');
+addColumnIfMissing('Business', 'deepgramLanguage', 'TEXT');
+addColumnIfMissing('Business', 'agentStyle', 'TEXT');
+addColumnIfMissing('Business', 'agentMaxResponseSentences', 'INTEGER');
 
 db.close();
 console.log(`SQLite bootstrap listo: ${dbPath}`);

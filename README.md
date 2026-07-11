@@ -114,7 +114,8 @@ Hecho:
 - Resolucion inicial de tenant por header/query y filtrado de pedidos, llamadas y menu por negocio.
 - CRUD basico de productos desde el panel admin.
 - Edicion basica de nombre, ciudad y modo de servicio del negocio.
+- Configuracion de voz y comportamiento del agente por negocio.
 
 Siguiente paso recomendado:
 
-- Persistir configuracion de voz/agente por negocio.
+- Preparar despliegue con Postgres y variables de entorno de produccion.

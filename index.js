@@ -149,20 +149,59 @@ app.get('/api/business', (req, res) => {
             deepgramSpeakModel: currentBusiness.voice.deepgramSpeakModel,
             deepgramListenModel: currentBusiness.voice.deepgramListenModel,
             deepgramLanguage: currentBusiness.voice.deepgramLanguage
+        },
+        agent: {
+            style: currentBusiness.agent.style,
+            maxResponseSentences: currentBusiness.agent.maxResponseSentences
         }
     });
 });
 
 app.patch('/api/business', async (req, res) => {
-    const { name, city, serviceMode } = req.body;
+    const {
+        name,
+        city,
+        serviceMode,
+        voiceGreeting,
+        twilioLanguage,
+        twilioVoice,
+        deepgramSpeakModel,
+        deepgramListenModel,
+        deepgramLanguage,
+        agentStyle,
+        agentMaxResponseSentences
+    } = req.body;
     const allowedServiceModes = new Set(['pickup_only', 'delivery_only', 'pickup_and_delivery']);
+    const numericMaxResponseSentences = agentMaxResponseSentences === undefined
+        ? undefined
+        : Number(agentMaxResponseSentences);
     const data = {
         name: name === undefined ? undefined : String(name).trim(),
         city: city === undefined ? undefined : String(city).trim(),
-        serviceMode: serviceMode === undefined ? undefined : String(serviceMode).trim()
+        serviceMode: serviceMode === undefined ? undefined : String(serviceMode).trim(),
+        voiceGreeting: voiceGreeting === undefined ? undefined : String(voiceGreeting).trim(),
+        twilioLanguage: twilioLanguage === undefined ? undefined : String(twilioLanguage).trim(),
+        twilioVoice: twilioVoice === undefined ? undefined : String(twilioVoice).trim(),
+        deepgramSpeakModel: deepgramSpeakModel === undefined ? undefined : String(deepgramSpeakModel).trim(),
+        deepgramListenModel: deepgramListenModel === undefined ? undefined : String(deepgramListenModel).trim(),
+        deepgramLanguage: deepgramLanguage === undefined ? undefined : String(deepgramLanguage).trim(),
+        agentStyle: agentStyle === undefined ? undefined : String(agentStyle).trim(),
+        agentMaxResponseSentences: numericMaxResponseSentences
     };
 
-    if (data.name === '' || data.city === '' || (data.serviceMode && !allowedServiceModes.has(data.serviceMode))) {
+    if (
+        data.name === ''
+        || data.city === ''
+        || data.voiceGreeting === ''
+        || data.twilioLanguage === ''
+        || data.twilioVoice === ''
+        || data.deepgramSpeakModel === ''
+        || data.deepgramListenModel === ''
+        || data.deepgramLanguage === ''
+        || data.agentStyle === ''
+        || (data.serviceMode && !allowedServiceModes.has(data.serviceMode))
+        || (data.agentMaxResponseSentences !== undefined && (!Number.isInteger(data.agentMaxResponseSentences) || data.agentMaxResponseSentences < 1 || data.agentMaxResponseSentences > 5))
+    ) {
         return res.status(400).json({ error: 'datos de negocio invalidos' });
     }
 

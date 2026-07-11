@@ -30,7 +30,15 @@ async function main() {
             country: defaultBusiness.country,
             locale: defaultBusiness.locale,
             timezone: defaultBusiness.timezone,
-            serviceMode: defaultBusiness.serviceMode
+            serviceMode: defaultBusiness.serviceMode,
+            voiceGreeting: defaultBusiness.voice.greeting,
+            twilioLanguage: defaultBusiness.voice.twilioLanguage,
+            twilioVoice: defaultBusiness.voice.twilioVoice,
+            deepgramSpeakModel: defaultBusiness.voice.deepgramSpeakModel,
+            deepgramListenModel: defaultBusiness.voice.deepgramListenModel,
+            deepgramLanguage: defaultBusiness.voice.deepgramLanguage,
+            agentStyle: defaultBusiness.agent.style,
+            agentMaxResponseSentences: defaultBusiness.agent.maxResponseSentences
         },
         create: {
             id: defaultBusiness.id,
@@ -39,7 +47,15 @@ async function main() {
             country: defaultBusiness.country,
             locale: defaultBusiness.locale,
             timezone: defaultBusiness.timezone,
-            serviceMode: defaultBusiness.serviceMode
+            serviceMode: defaultBusiness.serviceMode,
+            voiceGreeting: defaultBusiness.voice.greeting,
+            twilioLanguage: defaultBusiness.voice.twilioLanguage,
+            twilioVoice: defaultBusiness.voice.twilioVoice,
+            deepgramSpeakModel: defaultBusiness.voice.deepgramSpeakModel,
+            deepgramListenModel: defaultBusiness.voice.deepgramListenModel,
+            deepgramLanguage: defaultBusiness.voice.deepgramLanguage,
+            agentStyle: defaultBusiness.agent.style,
+            agentMaxResponseSentences: defaultBusiness.agent.maxResponseSentences
         }
     });
 

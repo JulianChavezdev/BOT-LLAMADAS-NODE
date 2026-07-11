@@ -6,13 +6,26 @@ const fallbackBusinessOverrides = new Map();
 
 function mergeBusiness(dbBusiness) {
     const overrides = fallbackBusinessOverrides.get(dbBusiness.id) || {};
+    const source = {
+        ...dbBusiness,
+        ...overrides
+    };
 
     return {
         ...defaultBusiness,
-        ...dbBusiness,
-        ...overrides,
-        voice: defaultBusiness.voice,
-        agent: defaultBusiness.agent
+        ...source,
+        voice: {
+            greeting: source.voiceGreeting || defaultBusiness.voice.greeting,
+            twilioLanguage: source.twilioLanguage || defaultBusiness.voice.twilioLanguage,
+            twilioVoice: source.twilioVoice || defaultBusiness.voice.twilioVoice,
+            deepgramSpeakModel: source.deepgramSpeakModel || defaultBusiness.voice.deepgramSpeakModel,
+            deepgramListenModel: source.deepgramListenModel || defaultBusiness.voice.deepgramListenModel,
+            deepgramLanguage: source.deepgramLanguage || defaultBusiness.voice.deepgramLanguage
+        },
+        agent: {
+            style: source.agentStyle || defaultBusiness.agent.style,
+            maxResponseSentences: source.agentMaxResponseSentences || defaultBusiness.agent.maxResponseSentences
+        }
     };
 }
 
@@ -53,11 +66,32 @@ export async function getBusinessById(id = defaultBusiness.id) {
     );
 }
 
-export async function updateBusiness({ id, name, city, serviceMode }) {
+export async function updateBusiness({
+    id,
+    name,
+    city,
+    serviceMode,
+    voiceGreeting,
+    twilioLanguage,
+    twilioVoice,
+    deepgramSpeakModel,
+    deepgramListenModel,
+    deepgramLanguage,
+    agentStyle,
+    agentMaxResponseSentences
+}) {
     const data = {
         ...(name ? { name } : {}),
         ...(city ? { city } : {}),
-        ...(serviceMode ? { serviceMode } : {})
+        ...(serviceMode ? { serviceMode } : {}),
+        ...(voiceGreeting ? { voiceGreeting } : {}),
+        ...(twilioLanguage ? { twilioLanguage } : {}),
+        ...(twilioVoice ? { twilioVoice } : {}),
+        ...(deepgramSpeakModel ? { deepgramSpeakModel } : {}),
+        ...(deepgramListenModel ? { deepgramListenModel } : {}),
+        ...(deepgramLanguage ? { deepgramLanguage } : {}),
+        ...(agentStyle ? { agentStyle } : {}),
+        ...(agentMaxResponseSentences ? { agentMaxResponseSentences } : {})
     };
 
     return withPrisma(
