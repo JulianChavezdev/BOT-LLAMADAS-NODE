@@ -36,6 +36,8 @@ import {
 } from './src/repositories/menuRepository.js';
 import { getBusinessById, updateBusiness } from './src/repositories/businessRepository.js';
 import { describeAdminAuth, requireAdmin } from './src/middleware/adminAuth.js';
+import { errorHandler, notFoundHandler } from './src/middleware/errorHandler.js';
+import { requestLogger } from './src/middleware/requestLogger.js';
 import { resolveTenant } from './src/middleware/tenantResolver.js';
 
 const app = express();
@@ -71,6 +73,7 @@ const sheets = google.sheets({ version: 'v4', auth: authSheets });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 app.use((req, res, next) => {
     if (req.path === '/admin.html' || req.path === '/cocina.html') {
         return requireAdmin(req, res, next);
@@ -635,6 +638,9 @@ catch(e){
     });
 
 });
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 server.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);

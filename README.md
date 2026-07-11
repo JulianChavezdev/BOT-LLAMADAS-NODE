@@ -132,6 +132,7 @@ Hecho:
 - Configuracion de voz y comportamiento del agente por negocio.
 - Validador de variables de entorno para despliegue.
 - CI basico en GitHub Actions para instalar, generar Prisma, validar schema y revisar sintaxis.
+- Logs HTTP basicos y respuestas JSON para errores de API.
 
 Siguiente paso recomendado:
 
