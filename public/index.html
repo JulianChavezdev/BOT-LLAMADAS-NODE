@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalomonBot | Bot telefonico para restaurantes</title>
+    <meta name="description" content="SalomonBot atiende llamadas, toma pedidos y actualiza cocina con un asistente de voz para restaurantes.">
+    <style>
+        :root {
+            --bg: #f7f2e8;
+            --paper: #fffaf1;
+            --ink: #191712;
+            --muted: #696255;
+            --line: #ded2bd;
+            --green: #214f3a;
+            --green-soft: #d9eadf;
+            --orange: #e99243;
+            --cream: #fbf4e6;
+            --shadow: 0 24px 70px rgba(44, 35, 21, 0.16);
+        }
+
+        * { box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            letter-spacing: 0;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .wrap {
+            width: min(1120px, calc(100% - 32px));
+            margin: 0 auto;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(247, 242, 232, 0.88);
+            backdrop-filter: blur(18px);
+            border-bottom: 1px solid rgba(222, 210, 189, 0.8);
+        }
+
+        .nav-inner {
+            min-height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .brand {
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 0 20px;
+            border-radius: 999px;
+            border: 1px solid var(--ink);
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: var(--ink); color: var(--cream); box-shadow: 0 14px 28px rgba(25, 23, 18, .18); }
+        .btn-secondary { background: transparent; color: var(--ink); }
+
+        .hero {
+            padding: 72px 0 48px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.02fr) minmax(320px, .78fr);
+            gap: 56px;
+            align-items: center;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--green-soft);
+            color: var(--green);
+            font-weight: 800;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(52px, 8vw, 104px);
+            line-height: .88;
+            letter-spacing: 0;
+        }
+
+        .hero-copy {
+            margin: 24px 0 0;
+            max-width: 620px;
+            color: var(--muted);
+            font-size: 21px;
+            line-height: 1.45;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 32px;
+        }
+
+        .trust-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 30px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .pill {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 8px 12px;
+            background: rgba(255, 250, 241, .65);
+        }
+
+        .phone {
+            width: min(390px, 100%);
+            margin-left: auto;
+            border-radius: 40px;
+            background: #171713;
+            padding: 14px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(25, 23, 18, .2);
+        }
+
+        .screen {
+            min-height: 660px;
+            border-radius: 30px;
+            overflow: hidden;
+            background: linear-gradient(180deg, #fff7e9 0%, #f3e6d0 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen-head {
+            padding: 22px 20px 16px;
+            border-bottom: 1px solid rgba(222, 210, 189, .9);
+        }
+
+        .mini-label {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .screen-title {
+            margin: 6px 0 0;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 31px;
+            line-height: 1;
+        }
+
+        .call-card {
+            margin: 16px;
+            padding: 18px;
+            border-radius: 24px;
+            background: var(--paper);
+            border: 1px solid var(--line);
+        }
+
+        .wave {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 12px 0;
+        }
+
+        .bar {
+            flex: 1;
+            border-radius: 99px;
+            background: var(--green);
+            animation: pulse 1.1s ease-in-out infinite;
+            min-height: 12px;
+        }
+
+        .bar:nth-child(2) { animation-delay: .08s; height: 34px; }
+        .bar:nth-child(3) { animation-delay: .16s; height: 48px; background: var(--orange); }
+        .bar:nth-child(4) { animation-delay: .24s; height: 28px; }
+        .bar:nth-child(5) { animation-delay: .32s; height: 42px; }
+        .bar:nth-child(6) { animation-delay: .40s; height: 22px; background: var(--orange); }
+        .bar:nth-child(7) { animation-delay: .48s; height: 46px; }
+        .bar:nth-child(8) { animation-delay: .56s; height: 30px; }
+
+        @keyframes pulse {
+            0%, 100% { transform: scaleY(.72); opacity: .65; }
+            50% { transform: scaleY(1); opacity: 1; }
+        }
+
+        .chat {
+            display: grid;
+            gap: 10px;
+            padding: 0 16px 16px;
+        }
+
+        .bubble {
+            max-width: 86%;
+            border-radius: 18px;
+            padding: 12px 14px;
+            font-size: 14px;
+            line-height: 1.35;
+        }
+
+        .bot { background: var(--green); color: white; border-bottom-left-radius: 5px; }
+        .guest { justify-self: end; background: white; border: 1px solid var(--line); border-bottom-right-radius: 5px; }
+
+        .order-box {
+            margin: auto 16px 16px;
+            padding: 16px;
+            border-radius: 22px;
+            background: #191712;
+            color: var(--cream);
+        }
+
+        .order-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(255,255,255,.12);
+            font-size: 14px;
+        }
+
+        .section {
+            padding: 78px 0;
+            border-top: 1px solid var(--line);
+        }
+
+        .section-kicker {
+            color: var(--green);
+            font-weight: 900;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(36px, 5vw, 64px);
+            line-height: .96;
+        }
+
+        .section-copy {
+            max-width: 650px;
+            margin: 18px 0 0;
+            color: var(--muted);
+            font-size: 19px;
+            line-height: 1.5;
+        }
+
+        .feature-grid {
+            margin-top: 34px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .feature {
+            padding: 24px;
+            min-height: 210px;
+            border-radius: 24px;
+            border: 1px solid var(--line);
+            background: rgba(255, 250, 241, .64);
+        }
+
+        .feature strong {
+            display: block;
+            font-size: 21px;
+            margin-bottom: 10px;
+        }
+
+        .feature p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-top: 34px;
+        }
+
+        .step-number {
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 56px;
+            color: var(--orange);
+            line-height: 1;
+        }
+
+        .playground {
+            display: grid;
+            grid-template-columns: .9fr 1.1fr;
+            gap: 22px;
+            margin-top: 34px;
+            align-items: stretch;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            background: var(--paper);
+            padding: 24px;
+        }
+
+        .demo-options {
+            display: grid;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .demo-option {
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--line);
+            background: white;
+            border-radius: 16px;
+            padding: 14px;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .demo-option.active {
+            border-color: var(--green);
+            background: var(--green-soft);
+        }
+
+        .demo-log {
+            display: grid;
+            gap: 10px;
+            min-height: 360px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-top: 34px;
+        }
+
+        .metric {
+            padding: 22px;
+            border-radius: 22px;
+            border: 1px solid var(--line);
+            background: var(--paper);
+        }
+
+        .metric b {
+            display: block;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 44px;
+            line-height: 1;
+        }
+
+        .metric span {
+            display: block;
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .pricing {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-top: 34px;
+        }
+
+        .price-card {
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            background: var(--paper);
+            padding: 26px;
+        }
+
+        .price-card.highlight {
+            background: var(--green);
+            color: white;
+            border-color: var(--green);
+        }
+
+        .price {
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 46px;
+            margin: 16px 0 8px;
+        }
+
+        .price-card ul {
+            margin: 20px 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 10px;
+            color: var(--muted);
+        }
+
+        .price-card.highlight ul { color: rgba(255,255,255,.82); }
+
+        .faq {
+            display: grid;
+            gap: 10px;
+            margin-top: 34px;
+        }
+
+        details {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: var(--paper);
+            padding: 18px 20px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 800;
+        }
+
+        details p {
+            color: var(--muted);
+            margin: 12px 0 0;
+            line-height: 1.45;
+        }
+
+        .cta {
+            padding: 80px 0;
+            background: #191712;
+            color: var(--cream);
+        }
+
+        .cta .section-copy { color: rgba(255, 250, 241, .72); }
+
+        @media (max-width: 860px) {
+            .nav-links { display: none; }
+            .hero { padding-top: 44px; }
+            .hero-grid,
+            .playground,
+            .feature-grid,
+            .steps,
+            .pricing,
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+            .phone { margin: 10px auto 0; }
+            .screen { min-height: 590px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="wrap nav-inner">
+            <a class="brand" href="#">SalomonBot</a>
+            <div class="nav-links">
+                <a href="#funciona">Como funciona</a>
+                <a href="#playground">Playground</a>
+                <a href="#precios">Precios</a>
+                <a href="#faq">FAQ</a>
+            </div>
+            <a class="btn btn-primary" href="#playground">Probar demo</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="wrap hero-grid">
+            <div>
+                <div class="eyebrow">Bot de voz para restaurantes</div>
+                <h1>Convierte llamadas en pedidos.</h1>
+                <p class="hero-copy">SalomonBot atiende el telefono, responde con voz natural, toma pedidos y los manda a cocina sin que el equipo deje de trabajar.</p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="#playground">Probar playground</a>
+                    <a class="btn btn-secondary" href="#precios">Ver precios</a>
+                </div>
+                <div class="trust-row">
+                    <span class="pill">Sin app para el cliente</span>
+                    <span class="pill">Menu siempre editable</span>
+                    <span class="pill">Pedidos en cocina</span>
+                </div>
+            </div>
+
+            <div class="phone" aria-label="Vista movil de SalomonBot">
+                <div class="screen">
+                    <div class="screen-head">
+                        <div class="mini-label">Llamada entrante</div>
+                        <div class="screen-title">Bistro Nube</div>
+                    </div>
+                    <div class="call-card">
+                        <div class="mini-label">SalomonBot escuchando</div>
+                        <div class="wave">
+                            <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+                            <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+                        </div>
+                        <strong>Pedido detectado</strong>
+                    </div>
+                    <div class="chat">
+                        <div class="bubble bot">Hola, Bistro Nube. Que te apetece pedir hoy?</div>
+                        <div class="bubble guest">Una Burger Nube y una limonada.</div>
+                        <div class="bubble bot">Perfecto. Quieres agregar algo mas?</div>
+                        <div class="bubble guest">No, a nombre de Laura.</div>
+                    </div>
+                    <div class="order-box">
+                        <div class="mini-label">Enviado a cocina</div>
+                        <div class="order-row"><span>1x Burger Nube</span><strong>11,50 EUR</strong></div>
+                        <div class="order-row"><span>1x Limonada</span><strong>3,00 EUR</strong></div>
+                        <div class="order-row"><span>Total</span><strong>14,50 EUR</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="section" id="funciona">
+        <div class="wrap">
+            <div class="section-kicker">Todo en un solo flujo</div>
+            <h2>Mucho mas que contestar llamadas.</h2>
+            <p class="section-copy">El bot entiende el menu, calcula totales, valida disponibilidad y deja el pedido listo para cocina.</p>
+            <div class="feature-grid">
+                <article class="feature"><strong>Atencion por voz</strong><p>Recibe llamadas reales y responde con un asistente natural conectado a Deepgram y Twilio.</p></article>
+                <article class="feature"><strong>Menu editable</strong><p>Cambia productos, precios y disponibilidad desde el panel sin tocar codigo.</p></article>
+                <article class="feature"><strong>Cocina ordenada</strong><p>Los pedidos aparecen en una pantalla simple para marcar completados.</p></article>
+                <article class="feature"><strong>Multi-restaurante</strong><p>Base preparada para varios negocios con datos separados por tenant.</p></article>
+                <article class="feature"><strong>Control del negocio</strong><p>Edita nombre, ciudad, saludo y comportamiento del agente por restaurante.</p></article>
+                <article class="feature"><strong>Logs y trazabilidad</strong><p>Registra llamadas, pedidos y errores para operar mejor la demo y el futuro SaaS.</p></article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="wrap">
+            <div class="section-kicker">De cero a operando</div>
+            <h2>Tres pasos. Una llamada. Pedido listo.</h2>
+            <div class="steps">
+                <article class="feature"><div class="step-number">01</div><strong>Configura el restaurante</strong><p>Nombre, ciudad, saludo, voz, estilo y menu.</p></article>
+                <article class="feature"><div class="step-number">02</div><strong>Conecta Twilio</strong><p>Apunta el webhook al bot y recibe llamadas reales.</p></article>
+                <article class="feature"><div class="step-number">03</div><strong>Opera desde cocina</strong><p>El equipo ve pedidos, totales y estado en vivo.</p></article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="playground">
+        <div class="wrap">
+            <div class="section-kicker">Playground</div>
+            <h2>Muestra el bot sin hacer una llamada real.</h2>
+            <p class="section-copy">Selecciona una situacion y enseña como SalomonBot convierte la conversacion en pedido.</p>
+            <div class="playground">
+                <div class="panel">
+                    <strong>Escenario</strong>
+                    <div class="demo-options">
+                        <button class="demo-option active" data-demo="simple">Pedido simple</button>
+                        <button class="demo-option" data-demo="agotado">Producto agotado</button>
+                        <button class="demo-option" data-demo="cambio">Cliente cambia pedido</button>
+                    </div>
+                    <a class="btn btn-primary" href="/admin">Abrir admin real</a>
+                </div>
+                <div class="panel">
+                    <div class="demo-log" id="demo-log"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="wrap">
+            <div class="section-kicker">Numeros para vender</div>
+            <h2>Menos llamadas perdidas. Mas pedidos capturados.</h2>
+            <div class="metric-grid">
+                <article class="metric"><b>24/7</b><span>atencion automatizada</span></article>
+                <article class="metric"><b>0</b><span>apps para clientes</span></article>
+                <article class="metric"><b>1</b><span>panel para operar</span></article>
+                <article class="metric"><b>3</b><span>minutos para mostrar demo</span></article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="precios">
+        <div class="wrap">
+            <div class="section-kicker">Precios claros</div>
+            <h2>Planes simples para empezar.</h2>
+            <div class="pricing">
+                <article class="price-card">
+                    <strong>Demo</strong>
+                    <div class="price">49 EUR</div>
+                    <p>Configuracion inicial para validar con un restaurante.</p>
+                    <ul><li>1 restaurante</li><li>Menu demo</li><li>Panel admin</li></ul>
+                </article>
+                <article class="price-card highlight">
+                    <strong>Operativo</strong>
+                    <div class="price">99 EUR/mes</div>
+                    <p>Bot telefonico funcionando con pedidos y cocina.</p>
+                    <ul><li>Llamadas con Twilio</li><li>Voz con Deepgram</li><li>Soporte de configuracion</li></ul>
+                </article>
+                <article class="price-card">
+                    <strong>SaaS</strong>
+                    <div class="price">A medida</div>
+                    <p>Multi-restaurante, dominio propio y despliegue productivo.</p>
+                    <ul><li>Postgres</li><li>Deploy gestionado</li><li>Onboarding</li></ul>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="faq">
+        <div class="wrap">
+            <div class="section-kicker">FAQ</div>
+            <h2>Lo basico para decidir rapido.</h2>
+            <div class="faq">
+                <details open><summary>Necesito cambiar mi telefono?</summary><p>No. Se configura Twilio para recibir o redirigir llamadas al bot.</p></details>
+                <details><summary>Puede tomar pedidos reales?</summary><p>Si. El flujo ya guarda pedidos, totales y cliente, y los muestra en cocina.</p></details>
+                <details><summary>Que falta para produccion?</summary><p>Base Postgres, deploy, variables reales, dominio y prueba completa de llamada.</p></details>
+                <details><summary>Se puede adaptar a otro restaurante?</summary><p>Si. El sistema ya tiene tenant, menu editable y configuracion de negocio.</p></details>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="wrap">
+            <div class="section-kicker">SalomonBot</div>
+            <h2>Listo para demostrar el bot.</h2>
+            <p class="section-copy">La landing explica el producto y el playground permite enseñar el flujo sin depender de una llamada real.</p>
+            <div class="hero-actions">
+                <a class="btn btn-primary" href="#playground">Probar playground</a>
+                <a class="btn btn-secondary" href="/admin" style="color: var(--cream); border-color: rgba(255,255,255,.5)">Entrar al admin</a>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const demos = {
+            simple: [
+                ['bot', 'Hola, Bistro Nube. Que te apetece pedir hoy?'],
+                ['guest', 'Una Burger Nube y una limonada.'],
+                ['bot', 'Perfecto. Lo dejo a nombre de quien?'],
+                ['guest', 'Laura.'],
+                ['bot', 'Pedido registrado. Total 14,50 EUR.']
+            ],
+            agotado: [
+                ['bot', 'Hola, Bistro Nube. Que te apetece pedir hoy?'],
+                ['guest', 'Quiero un Wrap Veggie.'],
+                ['bot', 'Hoy no esta disponible. Te puedo ofrecer Burger Nube o Pollo Mediterraneo.'],
+                ['guest', 'Entonces Burger Nube.'],
+                ['bot', 'Perfecto. Quieres alguna bebida?']
+            ],
+            cambio: [
+                ['bot', 'Perfecto, tengo una Burger Nube. Algo mas?'],
+                ['guest', 'Mejor cambia a Pollo Mediterraneo y agrega patatas.'],
+                ['bot', 'Hecho. Pollo Mediterraneo con patatas. A nombre de quien?'],
+                ['guest', 'Carlos.'],
+                ['bot', 'Registrado para Carlos. Total actualizado.']
+            ]
+        };
+
+        function renderDemo(name) {
+            const log = document.getElementById('demo-log');
+            log.innerHTML = demos[name].map(([role, text]) => `<div class="bubble ${role}">${text}</div>`).join('');
+        }
+
+        document.querySelectorAll('.demo-option').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.demo-option').forEach(option => option.classList.remove('active'));
+                button.classList.add('active');
+                renderDemo(button.dataset.demo);
+            });
+        });
+
+        renderDemo('simple');
+    </script>
+</body>
+</html>

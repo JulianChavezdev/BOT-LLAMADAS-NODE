@@ -42,6 +42,7 @@ npm run db:studio
 ## Endpoints
 
 - `GET /health`: estado basico del servicio.
+- `GET /`: landing publica de SalomonBot con playground.
 - `POST /twilio-voice`: webhook de voz de Twilio.
 - `WS /media-stream`: puente de audio Twilio <-> Deepgram.
 - `GET /cocina`: panel demo de cocina.
@@ -133,7 +134,8 @@ Hecho:
 - Validador de variables de entorno para despliegue.
 - CI basico en GitHub Actions para instalar, generar Prisma, validar schema y revisar sintaxis.
 - Logs HTTP basicos y respuestas JSON para errores de API.
+- Landing publica de SalomonBot con playground comercial.
 
 Siguiente paso recomendado:
 
-- Preparar despliegue real con Postgres en el proveedor elegido.
+- Conectar la landing a un formulario real de leads o WhatsApp.
