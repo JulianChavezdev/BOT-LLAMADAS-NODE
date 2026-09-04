@@ -102,9 +102,9 @@
                         <option value="pickup_and_delivery" ${business.serviceMode === 'pickup_and_delivery' ? 'selected' : ''}>Recogida y domicilio</option>
                     </select>
                     <textarea name="voiceGreeting" rows="2" placeholder="Saludo inicial" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">${escapeHtml(business.voice.greeting)}</textarea>
-                    <select name="deepgramSpeakModel" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <div class="flex gap-2"><select name="deepgramSpeakModel" class="flex-1 w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
                         ${voicesCache.map(voice => `<option value="${escapeHtml(voice.id)}" ${voice.id === business.voice.deepgramSpeakModel ? 'selected' : ''}>${escapeHtml(voice.name)} - ${escapeHtml(voice.description)}</option>`).join('')}
-                    </select>
+                    </select><button type="button" id="preview-voice" class="bg-slate-800 hover:bg-slate-700 rounded px-3 text-sm" title="Escuchar voz">▶</button></div>
                     <input type="hidden" name="twilioLanguage" value="${escapeHtml(business.voice.twilioLanguage)}">
                     <input type="hidden" name="twilioVoice" value="${escapeHtml(business.voice.twilioVoice)}">
                     <input type="hidden" name="deepgramListenModel" value="${escapeHtml(business.voice.deepgramListenModel)}">
@@ -143,6 +143,27 @@
                 });
 
                 load();
+            });
+
+            document.getElementById('preview-voice').addEventListener('click', async () => {
+                const form = document.getElementById('business-form');
+                const button = document.getElementById('preview-voice');
+                button.disabled = true;
+                try {
+                    const response = await fetch('/api/voices/preview', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ voice: form.elements.deepgramSpeakModel.value })
+                    });
+                    if (!response.ok) throw new Error('No se pudo reproducir la voz');
+                    const audio = new Audio(URL.createObjectURL(await response.blob()));
+                    audio.onended = () => URL.revokeObjectURL(audio.src);
+                    await audio.play();
+                } catch (error) {
+                    alert(error.message);
+                } finally {
+                    button.disabled = false;
+                }
             });
         }
 
