@@ -110,6 +110,10 @@ npm run check:env
 
 Usa `.env.production.example` como base para configurar variables en el proveedor de deploy.
 
+### Vercel
+
+Vercel sirve la landing y las rutas HTTP mediante `api/index.js`. El WebSocket `/media-stream` requiere un proceso persistente, por lo que el backend de voz debe desplegarse en Render, Railway o Fly.io.
+
 ## Estado SaaS
 
 Hecho:

@@ -642,7 +642,11 @@ catch(e){
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-server.listen(PORT, () => {
-    console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`💻 Panel de cocina en: http://localhost:${PORT}/cocina\n`);
-});
+if (!process.env.VERCEL) {
+    server.listen(PORT, () => {
+        console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
+        console.log(`💻 Panel de cocina en: http://localhost:${PORT}/cocina\n`);
+    });
+}
+
+export default app;
