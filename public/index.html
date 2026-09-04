@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SalomonBot | Bot telefonico para restaurantes</title>
-    <meta name="description" content="SalomonBot atiende llamadas, toma pedidos y actualiza cocina con un asistente de voz para restaurantes.">
+    <title>NatBot | Bot telefonico para restaurantes</title>
+    <meta name="description" content="NatBot atiende llamadas, toma pedidos y actualiza cocina con un asistente de voz para restaurantes.">
     <style>
         :root {
             --bg: #0d0d0d;
@@ -165,7 +165,7 @@
         }
 
         .hero-visual { position: relative; min-height: 520px; display: flex; align-items: center; justify-content: center; }
-        .dish-card { position: absolute; width: 220px; height: 390px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,.2); border-radius: 22px; overflow: hidden; box-shadow: 0 22px 55px rgba(0,0,0,.4); background-image: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.88)), url('/assets/salomonbot-food-triptych.png'); background-size: 300% 100%; background-position: center; color: white; }
+        .dish-card { position: absolute; width: 220px; height: 390px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,.2); border-radius: 22px; overflow: hidden; box-shadow: 0 22px 55px rgba(0,0,0,.4); background-image: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.88)), url('/assets/natbot-food-triptych.png'); background-size: 300% 100%; background-position: center; color: white; }
         .dish-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 48%, rgba(0,0,0,.86)); pointer-events: none; }
         .dish-card > * { position: relative; z-index: 1; }
         .dish-card span, .dish-card small { font-size: 10px; letter-spacing: 1px; font-weight: 800; }
@@ -522,7 +522,7 @@
 <body>
     <nav class="nav">
         <div class="wrap nav-inner">
-            <a class="brand" href="#">SalomonBot</a>
+            <a class="brand" href="#">NatBot</a>
             <div class="nav-links">
                 <a href="#funciona">Como funciona</a>
                 <a href="#playground">Playground</a>
@@ -538,7 +538,7 @@
             <div>
                 <div class="eyebrow">Bot de voz para restaurantes</div>
                 <h1>Convierte llamadas en pedidos.</h1>
-                <p class="hero-copy">SalomonBot atiende el telefono, responde con voz natural, toma pedidos y los manda a cocina sin que el equipo deje de trabajar.</p>
+                <p class="hero-copy">NatBot atiende el telefono, responde con voz natural, toma pedidos y los manda a cocina sin que el equipo deje de trabajar.</p>
                 <div class="hero-actions">
                     <a class="btn btn-primary" href="#playground">Probar playground</a>
                     <a class="btn btn-secondary" href="#precios">Ver precios</a>
@@ -550,9 +550,9 @@
                 </div>
             </div>
 
-            <div class="hero-visual" aria-label="SalomonBot convierte una llamada en un pedido">
+            <div class="hero-visual" aria-label="NatBot convierte una llamada en un pedido">
                 <div class="dish-card dish-one"><span>BISTRO NUBE</span><strong>Pizza Margarita</strong><small>Pedido por voz</small></div>
-                <div class="dish-card dish-two"><span>LLAMADA ACTIVA</span><div class="voice-orb">&#127908;</div><strong>SalomonBot</strong><small>Escuchando al cliente</small></div>
+                <div class="dish-card dish-two"><span>LLAMADA ACTIVA</span><div class="voice-orb">&#127908;</div><strong>NatBot</strong><small>Escuchando al cliente</small></div>
                 <div class="dish-card dish-three"><span>ENVIADO A COCINA</span><strong>Burger Nube</strong><small>11,50 EUR</small></div>
             </div>
         </div>
@@ -589,16 +589,16 @@
     <section class="section" id="playground">
         <div class="wrap">
             <div class="section-kicker">Playground</div>
-            <h2>Habla con SalomonBot.</h2>
+            <h2>Habla con NatBot.</h2>
             <p class="section-copy">Pulsa el microfono, habla como un cliente y escucha como responde el asistente.</p>
             <div class="playground">
                 <div class="panel">
                     <strong>Prueba por voz</strong>
                     <div class="voice-panel">
                         <strong>Demo interactiva</strong>
-                        <p>El navegador escuchara tu voz y SalomonBot contestara en tiempo real.</p>
+                        <p>Graba tu mensaje y NatBot lo transcribe con Deepgram para contestarte.</p>
                         <div class="voice-controls">
-                            <button class="mic-button" id="mic-button" type="button" aria-label="Hablar con SalomonBot">&#127908;</button>
+                            <button class="mic-button" id="mic-button" type="button" aria-label="Hablar con NatBot">&#127908;</button>
                             <span class="voice-status" id="voice-status">Pulsa para empezar</span>
                         </div>
                     </div>
@@ -673,7 +673,7 @@
 
     <section class="cta">
         <div class="wrap">
-            <div class="section-kicker">SalomonBot</div>
+            <div class="section-kicker">NatBot</div>
             <h2>Listo para demostrar el bot.</h2>
             <p class="section-copy">La landing explica el producto y el playground permite enseñar el flujo sin depender de una llamada real.</p>
             <div class="hero-actions">
@@ -726,8 +726,10 @@
         const micButton = document.getElementById('mic-button');
         const voiceStatus = document.getElementById('voice-status');
         const voiceLog = document.getElementById('voice-log');
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const voiceHistory = [];
+        let recorder = null;
+        let recorderStream = null;
+        let audioChunks = [];
 
         function addVoiceMessage(role, content) {
             voiceHistory.push({ role, content });
@@ -748,7 +750,7 @@
         }
 
         async function answerVoice(message) {
-            voiceStatus.textContent = 'SalomonBot esta pensando...';
+                voiceStatus.textContent = 'NatBot esta pensando...';
             try {
                 const response = await fetch('/api/playground-chat', {
                     method: 'POST',
@@ -765,27 +767,55 @@
             }
         }
 
-        if (!SpeechRecognition) {
-            voiceStatus.textContent = 'Usa Chrome o Edge para activar el microfono';
-            micButton.disabled = true;
-        } else {
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'es-ES';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-            recognition.onstart = () => { micButton.classList.add('listening'); voiceStatus.textContent = 'Te escucho...'; };
-            recognition.onend = () => micButton.classList.remove('listening');
-            recognition.onerror = () => { micButton.classList.remove('listening'); voiceStatus.textContent = 'No he podido escucharte. Intentalo de nuevo'; };
-            recognition.onresult = event => {
-                const message = event.results[0][0].transcript.trim();
-                addVoiceMessage('user', message);
-                answerVoice(message);
-            };
-            micButton.addEventListener('click', () => {
-                window.speechSynthesis?.cancel();
-                recognition.start();
+        async function transcribeRecording(blob) {
+            voiceStatus.textContent = 'NatBot esta transcribiendo...';
+            const response = await fetch('/api/playground-transcribe', {
+                method: 'POST',
+                headers: { 'Content-Type': blob.type || 'audio/webm' },
+                body: blob
             });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Error de transcripcion');
+            const message = data.transcript?.trim();
+            if (!message) {
+                voiceStatus.textContent = 'No he detectado voz. Intentalo de nuevo';
+                return;
+            }
+            addVoiceMessage('user', message);
+            await answerVoice(message);
         }
+
+        async function toggleRecording() {
+            if (recorder?.state === 'recording') {
+                recorder.stop();
+                return;
+            }
+
+            if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+                voiceStatus.textContent = 'Este navegador no permite grabar audio';
+                return;
+            }
+
+            try {
+                recorderStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks = [];
+                recorder = new MediaRecorder(recorderStream);
+                recorder.ondataavailable = event => { if (event.data.size) audioChunks.push(event.data); };
+                recorder.onstop = async () => {
+                    micButton.classList.remove('listening');
+                    recorderStream?.getTracks().forEach(track => track.stop());
+                    try { await transcribeRecording(new Blob(audioChunks, { type: recorder.mimeType || 'audio/webm' })); }
+                    catch (error) { voiceStatus.textContent = 'No se pudo procesar el audio. Revisa el microfono'; }
+                };
+                recorder.start();
+                micButton.classList.add('listening');
+                voiceStatus.textContent = 'Te escucho. Pulsa de nuevo para enviar';
+            } catch (error) {
+                voiceStatus.textContent = 'Permite el acceso al microfono para probar NatBot';
+            }
+        }
+
+        micButton.addEventListener('click', () => { window.speechSynthesis?.cancel(); toggleRecording(); });
     </script>
 </body>
 </html>

@@ -101,7 +101,7 @@ app.get('/health', (req, res) => {
 
 const playgroundFallbacks = [
     { terms: ['agotado', 'no hay', 'disponible'], reply: 'Ahora mismo ese producto no esta disponible, pero puedo ofrecerte la Burger Nube o el Pollo Mediterraneo.' },
-    { terms: ['hola', 'buenas'], reply: 'Hola, soy SalomonBot. Que te apetece pedir hoy?' },
+    { terms: ['hola', 'buenas'], reply: 'Hola, soy NatBot. Que te apetece pedir hoy?' },
     { terms: ['burger', 'hamburguesa'], reply: 'Perfecto, una Burger Nube. Quieres anadir una bebida o algo mas?' },
     { terms: ['limonada', 'bebida'], reply: 'Anotado. Algo mas para tu pedido?' },
     { terms: ['termine', 'nada mas'], reply: 'Perfecto. A nombre de quien preparo el pedido?' }
@@ -122,7 +122,7 @@ app.post('/api/playground-chat', async (req, res) => {
                 temperature: 0.35,
                 max_tokens: 120,
                 messages: [
-                    { role: 'system', content: `${await buildCurrentSystemPrompt(business)}\nEs una demo web. Responde solo con la frase del asistente, sin terminos tecnicos. MENU: ${JSON.stringify(menuItems)}` },
+                    { role: 'system', content: `${await buildCurrentSystemPrompt(business)}\nEs una demo web de NatBot. Responde solo con la frase del asistente, sin terminos tecnicos. MENU: ${JSON.stringify(menuItems)}` },
                     ...history.filter(item => ['user', 'assistant'].includes(item.role)).map(item => ({ role: item.role, content: String(item.content).slice(0, 500) })),
                     { role: 'user', content: message }
                 ]
@@ -136,6 +136,36 @@ app.post('/api/playground-chat', async (req, res) => {
     const normalized = message.toLowerCase();
     const match = playgroundFallbacks.find(item => item.terms.some(term => normalized.includes(term)));
     res.json({ reply: match?.reply || 'Te escucho. Puedes pedirme una Burger Nube, Pollo Mediterraneo o una limonada.' });
+});
+
+app.post('/api/playground-transcribe', express.raw({ type: () => true, limit: '10mb' }), async (req, res) => {
+    if (!process.env.DEEPGRAM_API_KEY) {
+        return res.status(503).json({ error: 'DEEPGRAM_API_KEY no configurada' });
+    }
+
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        return res.status(400).json({ error: 'audio requerido' });
+    }
+
+    try {
+        const contentType = String(req.headers['content-type'] || 'audio/webm').split(';')[0];
+        const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-3&language=es&smart_format=true', {
+            method: 'POST',
+            headers: {
+                Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
+                'Content-Type': contentType
+            },
+            body: req.body
+        });
+        const data = await response.json();
+        if (!response.ok) return res.status(502).json({ error: data.err_msg || 'Deepgram rechazo el audio' });
+
+        const transcript = data.results?.channels?.[0]?.alternatives?.[0]?.transcript?.trim() || '';
+        res.json({ transcript });
+    } catch (error) {
+        console.error('Error transcribiendo playground:', error.message);
+        res.status(502).json({ error: 'No se pudo transcribir el audio' });
+    }
 });
 
 // ==========================================
