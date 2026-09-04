@@ -14,3 +14,5 @@ data/*.json
 !data/.gitkeep
 prisma/*.db
 prisma/*.db-journal
+
+.vercel
