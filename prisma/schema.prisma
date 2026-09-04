@@ -11,6 +11,11 @@ model Business {
   id          String   @id
   name        String
   city        String
+  description String?
+  address     String?
+  phone       String?
+  openingHours String?
+  faq         String?
   country     String   @default("ES")
   locale      String   @default("es-ES")
   timezone    String   @default("Europe/Madrid")

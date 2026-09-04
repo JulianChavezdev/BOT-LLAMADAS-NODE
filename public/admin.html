@@ -55,6 +55,7 @@
     <script>
         const money = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
         let menuItemsCache = [];
+        let voicesCache = [];
 
         async function fetchJson(url, options) {
             const response = await fetch(url, options);
@@ -86,22 +87,29 @@
             document.getElementById('business').innerHTML = `
                 <p><span class="text-slate-500">ID:</span> ${escapeHtml(business.id)}</p>
                 <p><span class="text-slate-500">Zona horaria:</span> ${escapeHtml(business.timezone)}</p>
-                <p><span class="text-slate-500">Voz:</span> ${escapeHtml(business.voice.deepgramSpeakModel)}</p>
+                <p><span class="text-slate-500">Voz:</span> ${escapeHtml((voicesCache.find(voice => voice.id === business.voice.deepgramSpeakModel) || {}).name || business.voice.deepgramSpeakModel)}</p>
                 <form id="business-form" class="space-y-2 pt-2">
-                    <input name="name" value="${escapeHtml(business.name)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
-                    <input name="city" value="${escapeHtml(business.city)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="name" value="${escapeHtml(business.name)}" placeholder="Nombre del restaurante" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="city" value="${escapeHtml(business.city)}" placeholder="Ciudad" required class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <textarea name="description" rows="2" placeholder="Describe tu restaurante" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">${escapeHtml(business.description)}</textarea>
+                    <input name="address" value="${escapeHtml(business.address)}" placeholder="Direccion" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="phone" value="${escapeHtml(business.phone)}" placeholder="Telefono" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="openingHours" value="${escapeHtml(business.openingHours)}" placeholder="Horario" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <textarea name="faq" rows="3" placeholder="Alergias, reservas, politicas y preguntas frecuentes" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">${escapeHtml(business.faq)}</textarea>
                     <select name="serviceMode" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
                         <option value="pickup_only" ${business.serviceMode === 'pickup_only' ? 'selected' : ''}>Solo recogida</option>
                         <option value="delivery_only" ${business.serviceMode === 'delivery_only' ? 'selected' : ''}>Solo domicilio</option>
                         <option value="pickup_and_delivery" ${business.serviceMode === 'pickup_and_delivery' ? 'selected' : ''}>Recogida y domicilio</option>
                     </select>
-                    <textarea name="voiceGreeting" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">${escapeHtml(business.voice.greeting)}</textarea>
-                    <input name="twilioLanguage" value="${escapeHtml(business.voice.twilioLanguage)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
-                    <input name="twilioVoice" value="${escapeHtml(business.voice.twilioVoice)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
-                    <input name="deepgramSpeakModel" value="${escapeHtml(business.voice.deepgramSpeakModel)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
-                    <input name="deepgramListenModel" value="${escapeHtml(business.voice.deepgramListenModel)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
-                    <input name="deepgramLanguage" value="${escapeHtml(business.voice.deepgramLanguage)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
-                    <input name="agentStyle" value="${escapeHtml(business.agent.style)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <textarea name="voiceGreeting" rows="2" placeholder="Saludo inicial" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">${escapeHtml(business.voice.greeting)}</textarea>
+                    <select name="deepgramSpeakModel" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                        ${voicesCache.map(voice => `<option value="${escapeHtml(voice.id)}" ${voice.id === business.voice.deepgramSpeakModel ? 'selected' : ''}>${escapeHtml(voice.name)} - ${escapeHtml(voice.description)}</option>`).join('')}
+                    </select>
+                    <input type="hidden" name="twilioLanguage" value="${escapeHtml(business.voice.twilioLanguage)}">
+                    <input type="hidden" name="twilioVoice" value="${escapeHtml(business.voice.twilioVoice)}">
+                    <input type="hidden" name="deepgramListenModel" value="${escapeHtml(business.voice.deepgramListenModel)}">
+                    <input type="hidden" name="deepgramLanguage" value="${escapeHtml(business.voice.deepgramLanguage)}">
+                    <input name="agentStyle" value="${escapeHtml(business.agent.style)}" placeholder="Estilo del agente" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
                     <input name="agentMaxResponseSentences" type="number" min="1" max="5" value="${escapeHtml(business.agent.maxResponseSentences)}" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
                     <button class="w-full bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-2 text-sm font-medium">Guardar</button>
                 </form>
@@ -117,6 +125,11 @@
                     body: JSON.stringify({
                         name: formData.get('name'),
                         city: formData.get('city'),
+                        description: formData.get('description'),
+                        address: formData.get('address'),
+                        phone: formData.get('phone'),
+                        openingHours: formData.get('openingHours'),
+                        faq: formData.get('faq'),
                         serviceMode: formData.get('serviceMode'),
                         voiceGreeting: formData.get('voiceGreeting'),
                         twilioLanguage: formData.get('twilioLanguage'),
@@ -232,12 +245,14 @@
         }
 
         async function load() {
-            const [business, menuItems, orders, calls] = await Promise.all([
+            const [business, menuItems, orders, calls, voices] = await Promise.all([
                 fetchJson('/api/business'),
                 fetchJson('/api/menu-items'),
                 fetchJson('/api/pedidos/todos'),
-                fetchJson('/api/llamadas')
+                fetchJson('/api/llamadas'),
+                fetchJson('/api/voices')
             ]);
+            voicesCache = voices.voices || [];
 
             document.getElementById('stats').innerHTML = [
                 stat('Pedidos', orders.length),

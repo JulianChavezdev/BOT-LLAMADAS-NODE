@@ -36,6 +36,7 @@ import {
     updateMenuItem
 } from './src/repositories/menuRepository.js';
 import { getBusinessById, updateBusiness } from './src/repositories/businessRepository.js';
+import { isSupportedSpanishVoice, spanishSpainVoices } from './src/config/voices.js';
 import { describeAdminAuth, requireAdmin } from './src/middleware/adminAuth.js';
 import { errorHandler, notFoundHandler } from './src/middleware/errorHandler.js';
 import { requestLogger } from './src/middleware/requestLogger.js';
@@ -99,6 +100,10 @@ app.get('/health', (req, res) => {
     });
 });
 
+app.get('/api/voices', (req, res) => {
+    res.json({ provider: 'deepgram', language: 'es-ES', voices: spanishSpainVoices });
+});
+
 const playgroundFallbacks = [
     { terms: ['agotado', 'no hay', 'disponible'], reply: 'Ahora mismo ese producto no esta disponible, pero puedo ofrecerte la Burger Nube o el Pollo Mediterraneo.' },
     { terms: ['hola', 'buenas'], reply: 'Hola, soy NatBot. Que te apetece pedir hoy?' },
@@ -136,6 +141,28 @@ app.post('/api/playground-chat', async (req, res) => {
     const normalized = message.toLowerCase();
     const match = playgroundFallbacks.find(item => item.terms.some(term => normalized.includes(term)));
     res.json({ reply: match?.reply || 'Te escucho. Puedes pedirme una Burger Nube, Pollo Mediterraneo o una limonada.' });
+});
+
+app.post('/api/playground-order', async (req, res) => {
+    const customerName = String(req.body?.customerName || '').trim().slice(0, 120);
+    const summary = String(req.body?.summary || '').trim().slice(0, 1000);
+    const phone = String(req.body?.phone || 'demo').trim().slice(0, 40);
+    const total = req.body?.total === undefined || req.body?.total === '' ? null : Number(req.body.total);
+
+    if (!customerName || !summary || (total !== null && (!Number.isFinite(total) || total < 0))) {
+        return res.status(400).json({ error: 'customerName y summary son requeridos; total debe ser valido' });
+    }
+
+    const order = await createOrder({
+        id: `playground-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        businessId: business.id,
+        customerName,
+        phone,
+        summary,
+        total
+    });
+
+    res.status(201).json({ ok: true, order });
 });
 
 app.post('/api/playground-transcribe', express.raw({ type: () => true, limit: '10mb' }), async (req, res) => {
@@ -211,6 +238,11 @@ app.get('/api/business', (req, res) => {
         id: currentBusiness.id,
         name: currentBusiness.name,
         city: currentBusiness.city,
+        description: currentBusiness.description,
+        address: currentBusiness.address,
+        phone: currentBusiness.phone,
+        openingHours: currentBusiness.openingHours,
+        faq: currentBusiness.faq,
         country: currentBusiness.country,
         locale: currentBusiness.locale,
         timezone: currentBusiness.timezone,
@@ -234,6 +266,11 @@ app.patch('/api/business', async (req, res) => {
     const {
         name,
         city,
+        description,
+        address,
+        phone,
+        openingHours,
+        faq,
         serviceMode,
         voiceGreeting,
         twilioLanguage,
@@ -251,6 +288,11 @@ app.patch('/api/business', async (req, res) => {
     const data = {
         name: name === undefined ? undefined : String(name).trim(),
         city: city === undefined ? undefined : String(city).trim(),
+        description: description === undefined ? undefined : String(description).trim(),
+        address: address === undefined ? undefined : String(address).trim(),
+        phone: phone === undefined ? undefined : String(phone).trim(),
+        openingHours: openingHours === undefined ? undefined : String(openingHours).trim(),
+        faq: faq === undefined ? undefined : String(faq).trim(),
         serviceMode: serviceMode === undefined ? undefined : String(serviceMode).trim(),
         voiceGreeting: voiceGreeting === undefined ? undefined : String(voiceGreeting).trim(),
         twilioLanguage: twilioLanguage === undefined ? undefined : String(twilioLanguage).trim(),
@@ -265,6 +307,8 @@ app.patch('/api/business', async (req, res) => {
     if (
         data.name === ''
         || data.city === ''
+        || data.description === ''
+        || data.address === ''
         || data.voiceGreeting === ''
         || data.twilioLanguage === ''
         || data.twilioVoice === ''
@@ -273,6 +317,7 @@ app.patch('/api/business', async (req, res) => {
         || data.deepgramLanguage === ''
         || data.agentStyle === ''
         || (data.serviceMode && !allowedServiceModes.has(data.serviceMode))
+        || (data.deepgramSpeakModel && !isSupportedSpanishVoice(data.deepgramSpeakModel))
         || (data.agentMaxResponseSentences !== undefined && (!Number.isInteger(data.agentMaxResponseSentences) || data.agentMaxResponseSentences < 1 || data.agentMaxResponseSentences > 5))
     ) {
         return res.status(400).json({ error: 'datos de negocio invalidos' });
@@ -533,6 +578,7 @@ const config = {
         speak: {
             provider: {
                 type: "deepgram",
+                version: "v1",
                 model: activeBusiness.voice.deepgramSpeakModel
             }
         },
