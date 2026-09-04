@@ -140,6 +140,20 @@ app.post('/api/voices/preview', async (req, res) => {
     }
 });
 
+app.post('/api/playground-speak', async (req, res) => {
+    const voice = String(req.body?.voice || 'aura-2-nestor-es').trim();
+    const text = String(req.body?.text || '').trim().slice(0, 500);
+    if (!text || !isSupportedSpanishVoice(voice)) return res.status(400).json({ error: 'texto o voz invalidos' });
+    if (!process.env.DEEPGRAM_API_KEY) return res.status(503).json({ error: 'DEEPGRAM_API_KEY no configurada' });
+    try {
+        const response = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(voice)}&encoding=mp3`, {
+            method: 'POST', headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text })
+        });
+        if (!response.ok) return res.status(502).json({ error: 'Deepgram no pudo generar la respuesta de voz' });
+        res.type('audio/mpeg').send(Buffer.from(await response.arrayBuffer()));
+    } catch (error) { console.error('Error de voz en playground:', error.message); res.status(502).json({ error: 'No se pudo generar la respuesta de voz' }); }
+});
+
 const playgroundFallbacks = [
     { terms: ['agotado', 'no hay', 'disponible'], reply: 'Ahora mismo ese producto no esta disponible, pero puedo ofrecerte la Burger Nube o el Pollo Mediterraneo.' },
     { terms: ['hola', 'buenas'], reply: 'Hola, soy NatBot. Que te apetece pedir hoy?' },
