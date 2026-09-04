@@ -41,6 +41,17 @@
 
         <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Servicios y reservas</h2>
+                <form id="service-form" class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
+                    <input name="name" required placeholder="Servicio" class="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="price" type="number" min="0" step="0.01" placeholder="Precio" class="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <input name="durationMinutes" type="number" min="5" value="30" placeholder="Minutos" class="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm">
+                    <button class="bg-emerald-600 hover:bg-emerald-500 rounded px-3 py-2 text-sm font-medium">Agregar servicio</button>
+                    <input name="description" placeholder="Descripcion del servicio" class="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm md:col-span-4">
+                </form>
+                <div id="services" class="space-y-2"></div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Pedidos</h2>
                 <div id="orders" class="space-y-3"></div>
             </div>
@@ -49,6 +60,11 @@
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Llamadas</h2>
                 <div id="calls" class="space-y-3"></div>
             </div>
+        </section>
+
+        <section class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">Citas</h2>
+            <div id="appointments" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
         </section>
     </main>
 
@@ -252,6 +268,32 @@
             `).join('') || '<p class="text-slate-500">Sin pedidos registrados.</p>';
         }
 
+        function renderServices(services) {
+            document.getElementById('services').innerHTML = services.map(service => `
+                <article class="border border-slate-800 rounded-lg p-3 flex items-center justify-between gap-3">
+                    <div><h3 class="font-medium">${escapeHtml(service.name)}</h3><p class="text-xs text-slate-500">${escapeHtml(service.description || '')} · ${escapeHtml(service.durationMinutes)} min</p></div>
+                    <div class="text-right"><span class="text-emerald-400">${service.price == null ? 'Consultar' : money.format(service.price)}</span><button data-service-id="${escapeHtml(service.id)}" class="block ml-auto mt-1 text-xs text-red-400 hover:text-red-300">Eliminar</button></div>
+                </article>`).join('') || '<p class="text-slate-500">Sin servicios configurados.</p>';
+            document.querySelectorAll('[data-service-id]').forEach(button => button.addEventListener('click', async () => {
+                await fetchJson(`/api/services/${encodeURIComponent(button.dataset.serviceId)}`, { method: 'DELETE' });
+                load();
+            }));
+        }
+
+        function renderAppointments(appointments) {
+            document.getElementById('appointments').innerHTML = appointments.map(appointment => `
+                <article class="border border-slate-800 rounded-lg p-3">
+                    <div class="flex justify-between gap-3"><h3 class="font-medium">${escapeHtml(appointment.customerName)}</h3><span class="text-xs px-2 py-1 rounded bg-slate-800">${escapeHtml(appointment.status)}</span></div>
+                    <p class="text-sm text-emerald-400 mt-2">${escapeHtml(new Date(appointment.startsAt).toLocaleString('es-ES'))}</p>
+                    <p class="text-sm text-slate-400 mt-1">${escapeHtml(appointment.service?.name || 'Servicio')} · ${escapeHtml(appointment.durationMinutes)} min</p>
+                    ${appointment.status !== 'cancelled' ? `<button data-appointment-id="${escapeHtml(appointment.id)}" class="mt-3 text-xs bg-slate-800 hover:bg-slate-700 rounded px-2 py-1">Marcar completada</button>` : ''}
+                </article>`).join('') || '<p class="text-slate-500">Sin citas registradas.</p>';
+            document.querySelectorAll('[data-appointment-id]').forEach(button => button.addEventListener('click', async () => {
+                await fetchJson(`/api/citas/${encodeURIComponent(button.dataset.appointmentId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'completed' }) });
+                load();
+            }));
+        }
+
         function renderCalls(calls) {
             document.getElementById('calls').innerHTML = calls.map(call => `
                 <article class="border border-slate-800 rounded-lg p-3">
@@ -266,12 +308,14 @@
         }
 
         async function load() {
-            const [business, menuItems, orders, calls, voices] = await Promise.all([
+            const [business, menuItems, orders, calls, voices, services, appointments] = await Promise.all([
                 fetchJson('/api/business'),
                 fetchJson('/api/menu-items'),
                 fetchJson('/api/pedidos/todos'),
                 fetchJson('/api/llamadas'),
-                fetchJson('/api/voices')
+                fetchJson('/api/voices'),
+                fetchJson('/api/services'),
+                fetchJson('/api/citas')
             ]);
             voicesCache = voices.voices || [];
 
@@ -286,6 +330,8 @@
             renderMenu(menuItems);
             renderOrders(orders);
             renderCalls(calls);
+            renderServices(services);
+            renderAppointments(appointments);
         }
 
         load().catch(error => {
@@ -310,6 +356,14 @@
             });
 
             form.reset();
+            load();
+        });
+
+        document.getElementById('service-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            await fetchJson('/api/services', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: formData.get('name'), description: formData.get('description'), price: formData.get('price'), durationMinutes: formData.get('durationMinutes') }) });
+            event.currentTarget.reset();
             load();
         });
     </script>

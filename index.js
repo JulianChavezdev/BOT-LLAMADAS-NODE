@@ -37,6 +37,7 @@ import {
 } from './src/repositories/menuRepository.js';
 import { getBusinessById, updateBusiness } from './src/repositories/businessRepository.js';
 import { isSupportedSpanishVoice, spanishSpainVoices } from './src/config/voices.js';
+import { createAppointment, createService, deleteService, listAppointments, listServices, updateAppointment, updateService } from './src/repositories/appointmentRepository.js';
 import { describeAdminAuth, requireAdmin } from './src/middleware/adminAuth.js';
 import { errorHandler, notFoundHandler } from './src/middleware/errorHandler.js';
 import { requestLogger } from './src/middleware/requestLogger.js';
@@ -89,7 +90,8 @@ const menu = bistroNubeMenu;
 
 async function buildCurrentSystemPrompt(currentBusiness) {
     const menuItems = await listMenuItems(currentBusiness.id);
-    return buildSystemPrompt({ business: currentBusiness, menuItems });
+    const services = await listServices(currentBusiness.id);
+    return buildSystemPrompt({ business: { ...currentBusiness, services }, menuItems });
 }
 
 app.get('/health', (req, res) => {
@@ -457,6 +459,69 @@ app.delete('/api/menu-items/:id', async (req, res) => {
     res.status(204).send();
 });
 
+app.get('/api/services', async (req, res) => {
+    res.json(await listServices(req.business.id));
+});
+
+app.post('/api/services', async (req, res) => {
+    const name = String(req.body?.name || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const price = req.body?.price === '' || req.body?.price === undefined ? null : Number(req.body.price);
+    const durationMinutes = Number(req.body?.durationMinutes || 30);
+    if (!name || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isInteger(durationMinutes) || durationMinutes < 5 || durationMinutes > 480) {
+        return res.status(400).json({ error: 'nombre, precio y duracion validos son requeridos' });
+    }
+    const service = await createService({ businessId: req.business.id, name, description, price, durationMinutes });
+    res.status(201).json(service);
+});
+
+app.patch('/api/services/:id', async (req, res) => {
+    const data = {};
+    if (req.body?.name !== undefined) data.name = String(req.body.name).trim();
+    if (req.body?.description !== undefined) data.description = String(req.body.description || '').trim();
+    if (req.body?.price !== undefined) data.price = req.body.price === '' ? null : Number(req.body.price);
+    if (req.body?.durationMinutes !== undefined) data.durationMinutes = Number(req.body.durationMinutes);
+    if (req.body?.available !== undefined) data.available = Boolean(req.body.available);
+    if (data.name === '' || (data.price !== undefined && data.price !== null && (!Number.isFinite(data.price) || data.price < 0)) || (data.durationMinutes !== undefined && (!Number.isInteger(data.durationMinutes) || data.durationMinutes < 5 || data.durationMinutes > 480))) {
+        return res.status(400).json({ error: 'datos de servicio invalidos' });
+    }
+    const service = await updateService(req.params.id, req.business.id, data);
+    if (!service) return res.status(404).json({ error: 'servicio no encontrado' });
+    res.json(service);
+});
+
+app.delete('/api/services/:id', async (req, res) => {
+    if (!await deleteService(req.params.id, req.business.id)) return res.status(404).json({ error: 'servicio no encontrado' });
+    res.status(204).send();
+});
+
+app.get('/api/citas', async (req, res) => {
+    res.json(await listAppointments(req.business.id));
+});
+
+app.post('/api/citas', async (req, res) => {
+    const customerName = String(req.body?.customerName || '').trim();
+    const startsAt = String(req.body?.startsAt || '').trim();
+    const durationMinutes = Number(req.body?.durationMinutes || 30);
+    if (!customerName || !startsAt || !Number.isInteger(durationMinutes) || durationMinutes < 5 || durationMinutes > 480) {
+        return res.status(400).json({ error: 'cliente, fecha y duracion son requeridos' });
+    }
+    try {
+        const appointment = await createAppointment({ businessId: req.business.id, serviceId: req.body?.serviceId || null, customerName, phone: String(req.body?.phone || '').trim(), startsAt, durationMinutes, notes: String(req.body?.notes || '').trim() });
+        res.status(201).json(appointment);
+    } catch (error) {
+        res.status(409).json({ error: error.message });
+    }
+});
+
+app.patch('/api/citas/:id', async (req, res) => {
+    const status = String(req.body?.status || '').trim();
+    if (!['pending', 'confirmed', 'completed', 'cancelled'].includes(status)) return res.status(400).json({ error: 'estado invalido' });
+    const appointment = await updateAppointment(req.params.id, req.business.id, { status });
+    if (!appointment) return res.status(404).json({ error: 'cita no encontrada' });
+    res.json(appointment);
+});
+
 app.get('/api/pedidos/todos', async (req, res) => {
     const orders = await listOrders(req.business.id);
     res.json(orders);
@@ -731,6 +796,33 @@ catch(e){
                         name: functionName,
                         content: 'Pedido anotado. Gracias.'
                     }));
+                }
+            }
+        }
+
+        if (functionName === 'agendar_cita') {
+            const { nombre_cliente, servicio, fecha_hora, telefono, notas } = input;
+            try {
+                const services = await listServices(activeBusiness.id);
+                const selected = services.find(item => item.available !== false && item.name.toLowerCase() === String(servicio || '').toLowerCase())
+                    || services.find(item => item.available !== false && item.name.toLowerCase().includes(String(servicio || '').toLowerCase()));
+                if (!selected) throw new Error('servicio no encontrado');
+
+                const appointment = await createAppointment({
+                    businessId: activeBusiness.id,
+                    serviceId: selected.id,
+                    customerName: String(nombre_cliente).trim(),
+                    phone: telefono ? String(telefono).trim() : clienteTelefono,
+                    startsAt: fecha_hora,
+                    durationMinutes: selected.durationMinutes,
+                    notes: notas || ''
+                });
+                if (agentWs && agentWs.readyState === WebSocket.OPEN) {
+                    agentWs.send(JSON.stringify({ type: 'FunctionCallResponse', id: functionCallId, name: functionName, content: `Cita registrada para ${appointment.customerName} el ${appointment.startsAt}.` }));
+                }
+            } catch (error) {
+                if (agentWs && agentWs.readyState === WebSocket.OPEN) {
+                    agentWs.send(JSON.stringify({ type: 'FunctionCallResponse', id: functionCallId, name: functionName, content: `No se pudo agendar la cita: ${error.message}. Pide otro horario al cliente.` }));
                 }
             }
         }

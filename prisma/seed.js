@@ -79,6 +79,11 @@ async function main() {
             businessId: defaultBusiness.id
         }))
     });
+
+    await prisma.service.deleteMany({ where: { businessId: defaultBusiness.id } });
+    await prisma.service.createMany({
+        data: defaultBusiness.services.map(service => ({ ...service, businessId: defaultBusiness.id }))
+    });
 }
 
 main()
