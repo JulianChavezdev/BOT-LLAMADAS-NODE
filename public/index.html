@@ -7,15 +7,15 @@
     <meta name="description" content="SalomonBot atiende llamadas, toma pedidos y actualiza cocina con un asistente de voz para restaurantes.">
     <style>
         :root {
-            --bg: #f7f2e8;
-            --paper: #fffaf1;
-            --ink: #191712;
-            --muted: #696255;
-            --line: #ded2bd;
-            --green: #214f3a;
-            --green-soft: #d9eadf;
-            --orange: #e99243;
-            --cream: #fbf4e6;
+            --bg: #f0eee7;
+            --paper: #faf9f4;
+            --ink: #14251d;
+            --muted: #627069;
+            --line: #d7ddd5;
+            --green: #1c4b3a;
+            --green-soft: #dce9df;
+            --orange: #f0795e;
+            --cream: #f8f7f0;
             --shadow: 0 24px 70px rgba(44, 35, 21, 0.16);
         }
 
@@ -84,11 +84,14 @@
         }
 
         .btn:hover { transform: translateY(-1px); }
-        .btn-primary { background: var(--ink); color: var(--cream); box-shadow: 0 14px 28px rgba(25, 23, 18, .18); }
+        .btn-primary { background: var(--orange); color: var(--ink); border-color: var(--orange); box-shadow: 0 14px 28px rgba(0, 0, 0, .16); }
         .btn-secondary { background: transparent; color: var(--ink); }
 
         .hero {
-            padding: 72px 0 48px;
+            padding: 92px 0 64px;
+            background: var(--green);
+            color: var(--cream);
+            overflow: hidden;
         }
 
         .hero-grid {
@@ -122,7 +125,7 @@
         .hero-copy {
             margin: 24px 0 0;
             max-width: 620px;
-            color: var(--muted);
+            color: rgba(248, 247, 240, .78);
             font-size: 21px;
             line-height: 1.45;
         }
@@ -147,14 +150,15 @@
             border: 1px solid var(--line);
             border-radius: 999px;
             padding: 8px 12px;
-            background: rgba(255, 250, 241, .65);
+            background: rgba(255, 255, 255, .08);
+            color: inherit;
         }
 
         .phone {
             width: min(390px, 100%);
             margin-left: auto;
             border-radius: 40px;
-            background: #171713;
+            background: var(--orange);
             padding: 14px;
             box-shadow: var(--shadow);
             border: 1px solid rgba(25, 23, 18, .2);
@@ -265,6 +269,8 @@
             border-top: 1px solid var(--line);
         }
 
+        .section:nth-of-type(odd) { background: #f8f7f0; }
+
         .section-kicker {
             color: var(--green);
             font-weight: 900;
@@ -371,6 +377,22 @@
             gap: 10px;
             min-height: 360px;
         }
+
+        .voice-panel {
+            margin-top: 18px;
+            padding: 20px;
+            border-radius: 24px;
+            background: var(--green);
+            color: var(--cream);
+        }
+
+        .voice-panel p { margin: 8px 0 16px; color: rgba(248,247,240,.72); font-size: 14px; line-height: 1.4; }
+        .voice-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .mic-button { width: 58px; height: 58px; padding: 0; border: 0; border-radius: 50%; background: var(--orange); color: var(--ink); font-size: 25px; cursor: pointer; }
+        .mic-button.listening { animation: micPulse 1.2s ease-in-out infinite; }
+        .voice-status { font-size: 13px; color: rgba(248,247,240,.82); }
+        .voice-log { display: grid; gap: 10px; max-height: 330px; overflow: auto; }
+        @keyframes micPulse { 50% { box-shadow: 0 0 0 10px rgba(240,121,94,.2); transform: scale(1.04); } }
 
         .metric-grid {
             display: grid;
@@ -578,11 +600,20 @@
     <section class="section" id="playground">
         <div class="wrap">
             <div class="section-kicker">Playground</div>
-            <h2>Muestra el bot sin hacer una llamada real.</h2>
-            <p class="section-copy">Selecciona una situacion y enseña como SalomonBot convierte la conversacion en pedido.</p>
+            <h2>Habla con SalomonBot.</h2>
+            <p class="section-copy">Pulsa el microfono, habla como un cliente y escucha como responde el asistente.</p>
             <div class="playground">
                 <div class="panel">
-                    <strong>Escenario</strong>
+                    <strong>Prueba por voz</strong>
+                    <div class="voice-panel">
+                        <strong>Demo interactiva</strong>
+                        <p>El navegador escuchara tu voz y SalomonBot contestara en tiempo real.</p>
+                        <div class="voice-controls">
+                            <button class="mic-button" id="mic-button" type="button" aria-label="Hablar con SalomonBot">&#127908;</button>
+                            <span class="voice-status" id="voice-status">Pulsa para empezar</span>
+                        </div>
+                    </div>
+                    <strong>O elige un escenario</strong>
                     <div class="demo-options">
                         <button class="demo-option active" data-demo="simple">Pedido simple</button>
                         <button class="demo-option" data-demo="agotado">Producto agotado</button>
@@ -591,6 +622,7 @@
                     <a class="btn btn-primary" href="/admin">Abrir admin real</a>
                 </div>
                 <div class="panel">
+                    <div class="voice-log" id="voice-log" aria-live="polite"></div>
                     <div class="demo-log" id="demo-log"></div>
                 </div>
             </div>
@@ -701,6 +733,70 @@
         });
 
         renderDemo('simple');
+
+        const micButton = document.getElementById('mic-button');
+        const voiceStatus = document.getElementById('voice-status');
+        const voiceLog = document.getElementById('voice-log');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const voiceHistory = [];
+
+        function addVoiceMessage(role, content) {
+            voiceHistory.push({ role, content });
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${role === 'user' ? 'guest' : 'bot'}`;
+            bubble.textContent = content;
+            voiceLog.appendChild(bubble);
+            voiceLog.scrollTop = voiceLog.scrollHeight;
+        }
+
+        function speak(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            utterance.rate = 1;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        async function answerVoice(message) {
+            voiceStatus.textContent = 'SalomonBot esta pensando...';
+            try {
+                const response = await fetch('/api/playground-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, history: voiceHistory })
+                });
+                const data = await response.json();
+                const reply = data.reply || 'Puedes repetirmelo, por favor?';
+                addVoiceMessage('assistant', reply);
+                speak(reply);
+                voiceStatus.textContent = 'Pulsa el microfono para continuar';
+            } catch (error) {
+                voiceStatus.textContent = 'No se pudo conectar con la demo';
+            }
+        }
+
+        if (!SpeechRecognition) {
+            voiceStatus.textContent = 'Usa Chrome o Edge para activar el microfono';
+            micButton.disabled = true;
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            recognition.onstart = () => { micButton.classList.add('listening'); voiceStatus.textContent = 'Te escucho...'; };
+            recognition.onend = () => micButton.classList.remove('listening');
+            recognition.onerror = () => { micButton.classList.remove('listening'); voiceStatus.textContent = 'No he podido escucharte. Intentalo de nuevo'; };
+            recognition.onresult = event => {
+                const message = event.results[0][0].transcript.trim();
+                addVoiceMessage('user', message);
+                answerVoice(message);
+            };
+            micButton.addEventListener('click', () => {
+                window.speechSynthesis?.cancel();
+                recognition.start();
+            });
+        }
     </script>
 </body>
 </html>

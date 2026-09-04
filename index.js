@@ -14,6 +14,7 @@ import WebSocket from 'ws';
 import http from 'http';
 import twilio from 'twilio';
 import { google } from 'googleapis';
+import OpenAI from 'openai';
 import { defaultBusiness } from './src/config/businesses.js';
 import { buildSystemPrompt } from './src/services/promptBuilder.js';
 import { bistroNubeMenu } from './src/config/menus/bistroNubeMenu.js';
@@ -96,6 +97,45 @@ app.get('/health', (req, res) => {
         service: 'bot-llamadas-saas',
         businessId: business.id
     });
+});
+
+const playgroundFallbacks = [
+    { terms: ['agotado', 'no hay', 'disponible'], reply: 'Ahora mismo ese producto no esta disponible, pero puedo ofrecerte la Burger Nube o el Pollo Mediterraneo.' },
+    { terms: ['hola', 'buenas'], reply: 'Hola, soy SalomonBot. Que te apetece pedir hoy?' },
+    { terms: ['burger', 'hamburguesa'], reply: 'Perfecto, una Burger Nube. Quieres anadir una bebida o algo mas?' },
+    { terms: ['limonada', 'bebida'], reply: 'Anotado. Algo mas para tu pedido?' },
+    { terms: ['termine', 'nada mas'], reply: 'Perfecto. A nombre de quien preparo el pedido?' }
+];
+
+app.post('/api/playground-chat', async (req, res) => {
+    const message = String(req.body?.message || '').trim().slice(0, 500);
+    const history = Array.isArray(req.body?.history) ? req.body.history.slice(-8) : [];
+
+    if (!message) return res.status(400).json({ error: 'message es requerido' });
+
+    if (process.env.OPENAI_API_KEY) {
+        try {
+            const menuItems = await listMenuItems(business.id);
+            const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+            const completion = await client.chat.completions.create({
+                model: 'gpt-4o-mini',
+                temperature: 0.35,
+                max_tokens: 120,
+                messages: [
+                    { role: 'system', content: `${await buildCurrentSystemPrompt(business)}\nEs una demo web. Responde solo con la frase del asistente, sin terminos tecnicos. MENU: ${JSON.stringify(menuItems)}` },
+                    ...history.filter(item => ['user', 'assistant'].includes(item.role)).map(item => ({ role: item.role, content: String(item.content).slice(0, 500) })),
+                    { role: 'user', content: message }
+                ]
+            });
+            return res.json({ reply: completion.choices[0]?.message?.content?.trim() || 'Puedes repetirmelo, por favor?' });
+        } catch (error) {
+            console.error('Playground AI fallback:', error.message);
+        }
+    }
+
+    const normalized = message.toLowerCase();
+    const match = playgroundFallbacks.find(item => item.terms.some(term => normalized.includes(term)));
+    res.json({ reply: match?.reply || 'Te escucho. Puedes pedirme una Burger Nube, Pollo Mediterraneo o una limonada.' });
 });
 
 // ==========================================
