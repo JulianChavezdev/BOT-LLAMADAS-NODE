@@ -29,6 +29,11 @@ CREATE TABLE IF NOT EXISTS "Business" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "name" TEXT NOT NULL,
   "city" TEXT NOT NULL,
+  "description" TEXT,
+  "address" TEXT,
+  "phone" TEXT,
+  "openingHours" TEXT,
+  "faq" TEXT,
   "country" TEXT NOT NULL DEFAULT 'ES',
   "locale" TEXT NOT NULL DEFAULT 'es-ES',
   "timezone" TEXT NOT NULL DEFAULT 'Europe/Madrid',
@@ -103,12 +108,44 @@ CREATE TABLE IF NOT EXISTS "Order" (
   CONSTRAINT "Order_callId_fkey" FOREIGN KEY ("callId") REFERENCES "Call" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS "Service" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "businessId" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "description" TEXT,
+  "price" REAL,
+  "durationMinutes" INTEGER NOT NULL DEFAULT 30,
+  "available" BOOLEAN NOT NULL DEFAULT true,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "Service_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "Business" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "Appointment" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "businessId" TEXT NOT NULL,
+  "serviceId" TEXT,
+  "customerName" TEXT NOT NULL,
+  "phone" TEXT,
+  "startsAt" DATETIME NOT NULL,
+  "durationMinutes" INTEGER NOT NULL DEFAULT 30,
+  "notes" TEXT,
+  "status" TEXT NOT NULL DEFAULT 'pending',
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "Appointment_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "Business" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT "Appointment_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS "MenuItem_businessId_category_idx" ON "MenuItem" ("businessId", "category");
 CREATE UNIQUE INDEX IF NOT EXISTS "Customer_businessId_phone_key" ON "Customer" ("businessId", "phone");
 CREATE INDEX IF NOT EXISTS "Call_businessId_status_idx" ON "Call" ("businessId", "status");
 CREATE INDEX IF NOT EXISTS "Call_phone_idx" ON "Call" ("phone");
 CREATE INDEX IF NOT EXISTS "Order_businessId_status_idx" ON "Order" ("businessId", "status");
 CREATE INDEX IF NOT EXISTS "Order_phone_idx" ON "Order" ("phone");
+CREATE INDEX IF NOT EXISTS "Service_businessId_available_idx" ON "Service" ("businessId", "available");
+CREATE INDEX IF NOT EXISTS "Appointment_businessId_startsAt_idx" ON "Appointment" ("businessId", "startsAt");
+CREATE INDEX IF NOT EXISTS "Appointment_businessId_status_idx" ON "Appointment" ("businessId", "status");
 `);
 
 function addColumnIfMissing(tableName, columnName, definition) {
@@ -128,6 +165,11 @@ addColumnIfMissing('Business', 'deepgramListenModel', 'TEXT');
 addColumnIfMissing('Business', 'deepgramLanguage', 'TEXT');
 addColumnIfMissing('Business', 'agentStyle', 'TEXT');
 addColumnIfMissing('Business', 'agentMaxResponseSentences', 'INTEGER');
+addColumnIfMissing('Business', 'description', 'TEXT');
+addColumnIfMissing('Business', 'address', 'TEXT');
+addColumnIfMissing('Business', 'phone', 'TEXT');
+addColumnIfMissing('Business', 'openingHours', 'TEXT');
+addColumnIfMissing('Business', 'faq', 'TEXT');
 
 db.close();
 console.log(`SQLite bootstrap listo: ${dbPath}`);

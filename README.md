@@ -139,7 +139,13 @@ Hecho:
 - CI basico en GitHub Actions para instalar, generar Prisma, validar schema y revisar sintaxis.
 - Logs HTTP basicos y respuestas JSON para errores de API.
 - Landing publica de NatBot con playground comercial.
+- Servicios y citas con duración, control de solapamientos y estados operativos.
+- Cinco voces Aura-2 de Deepgram para español de España, con preescucha segura desde el panel.
+- Funciones de agente para cerrar pedidos y agendar citas.
+- Panel operativo con servicios, reservas, pedidos, llamadas y conocimiento del negocio.
 
 Siguiente paso recomendado:
 
-- Conectar la landing a un formulario real de leads o WhatsApp.
+- Conectar disponibilidad con Google Calendar o Calendly.
+- Añadir onboarding y autenticación por restaurante con cuentas multiempresa.
+- Migrar la persistencia productiva a Postgres gestionado y activar migraciones en despliegue.
